@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches: [main, autark-v1]
+  pull_request:
+    branches: [main, autark-v1]
+
+env:
+  RUST_VERSION: "1.89.0"
+  SOLANA_VERSION: "3.1.14"
+  ANCHOR_VERSION: "1.0.2"
+
+jobs:
+  anchor-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pinned Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "${{ env.RUST_VERSION }}"
+          components: rustfmt, clippy
+
+      - name: Cache cargo registry and git
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: cargo-registry-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo target dirs
+        uses: actions/cache@v4
+        with:
+          path: |
+            target/
+            programs/*/target/
+          key: cargo-target-${{ runner.os }}-${{ env.ANCHOR_VERSION }}-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache Solana CLI install + platform-tools
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.local/share/solana
+            ~/.cache/solana
+          key: solana-${{ runner.os }}-${{ env.SOLANA_VERSION }}
+
+      - name: Install pinned Solana CLI (Anza/Agave)
+        run: |
+          sh -c "$(curl -sSfL https://release.anza.xyz/v${{ env.SOLANA_VERSION }}/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> "$GITHUB_PATH"
+
+      - name: Cache AVM + Anchor binaries
+        id: avm-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.avm
+            ~/.cargo/bin/avm
+            ~/.cargo/bin/anchor
+          key: avm-anchor-${{ runner.os }}-${{ env.ANCHOR_VERSION }}
+
+      - name: Install AVM
+        if: steps.avm-cache.outputs.cache-hit != 'true'
+        run: cargo install --git https://github.com/coral-xyz/anchor avm --locked --force
+
+      - name: Install pinned Anchor via AVM
+        run: |
+          avm install ${{ env.ANCHOR_VERSION }}
+          avm use ${{ env.ANCHOR_VERSION }}
+
+      - name: Versions
+        run: |
+          rustc --version
+          solana --version
+          anchor --version
+
+      - name: anchor build
+        run: anchor build
+
+      # TODO(Tier 1): once v1 program tests exist, uncomment this step.
+      # v0's tests are being removed in Tier 0 and there is currently nothing
+      # meaningful to run here — do not enable until real v1 tests land.
+      # - name: anchor test
+      #   run: anchor test
