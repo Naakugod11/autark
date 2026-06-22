@@ -1,8 +1,9 @@
-use anchor_lang::prelude::*;
-
-pub const SEED_AGENT: &[u8] = b"agent";
-pub const SEED_JOB: &[u8] = b"job";
-
-pub const MAX_NAME_LEN: usize = 32;
-pub const MAX_CAPABILITY_LEN: usize = 64;
-pub const MAX_ENDPOINT_LEN: usize = 128;
+pub const MIN_STAKE_AMOUNT: u64 = 10_000_000; // 10 USDC, 6 decimals
+pub const MAX_CAPABILITIES: usize = 8;
+pub const MAX_COUNTERS: u8 = 2;
+pub const DEFAULT_CHALLENGE_WINDOW: u32 = 86_400; // 24h seconds (a DEFAULT, not an enforced minimum)
+pub const DEFENSE_WINDOW: i64 = 172_800; // 48h seconds
+pub const SLASH_PCT_PROPOSED_EXPIRED: u16 = 500; // 5% bps
+pub const SLASH_PCT_ABANDONED: u16 = 3000; // 30% bps
+pub const SLASH_PCT_LOST_CHALLENGE: u16 = 3000; // 30% extra bps
+pub const MAX_BUDGET_DEPTH: u8 = 5;

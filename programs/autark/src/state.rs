@@ -1,77 +1,194 @@
 use anchor_lang::prelude::*;
 
-use crate::constants::{MAX_CAPABILITY_LEN, MAX_ENDPOINT_LEN, MAX_NAME_LEN};
-
 // ─── Agent ───────────────────────────────────────────────────────────────────
 
+/// seeds: ["agent", owner]
 #[account]
-pub struct AgentAccount {
+#[derive(InitSpace)]
+pub struct Agent {
     pub owner: Pubkey,
-    pub name: String,
-    pub capability: String,
-    pub endpoint: String,
-    /// Suggested USDC price in micro-USDC (6 decimals), e.g. 1_000_000 = $1.
-    pub price_hint: u64,
+    /// <=8 tags, <=32 chars each
+    #[max_len(8, 32)]
+    pub capabilities: Vec<String>,
+    #[max_len(128)]
+    pub endpoint_url: String,
+    pub stake_amount: u64,
+    pub stake_vault: Pubkey,
+    pub score_completed: u64,
+    pub score_failed: u64,
+    pub score_volume: u64,
+    pub slash_events: u32,
+    pub last_slash_slot: u64,
+    pub created_at: i64,
     pub bump: u8,
 }
 
-impl AgentAccount {
-    // 8  discriminator
-    // 32 owner
-    // (4 + MAX_NAME_LEN)       name
-    // (4 + MAX_CAPABILITY_LEN) capability
-    // (4 + MAX_ENDPOINT_LEN)   endpoint
-    // 8  price_hint
-    // 1  bump
-    pub const SPACE: usize =
-        8 + 32 + (4 + MAX_NAME_LEN) + (4 + MAX_CAPABILITY_LEN) + (4 + MAX_ENDPOINT_LEN) + 8 + 1;
-    // = 285
-}
+// ─── MintWhitelist ───────────────────────────────────────────────────────────
 
-// ─── Job ─────────────────────────────────────────────────────────────────────
-
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq)]
-pub enum JobStatus {
-    Proposed,  // funds locked, awaiting provider response
-    Accepted,  // provider accepted, work in progress
-    Settled,   // provider delivered, funds released to provider
-    Rejected,  // provider declined, funds refunded to consumer
-    Expired,   // deadline passed without the required action, funds refunded to consumer
-}
-
+/// seeds: ["mint_whitelist"]  (global singleton)
 #[account]
+#[derive(InitSpace)]
+pub struct MintWhitelist {
+    pub authority: Pubkey,
+    #[max_len(16)]
+    pub mints: Vec<Pubkey>,
+    pub bump: u8,
+}
+
+// ─── SlashingPool ────────────────────────────────────────────────────────────
+
+/// seeds: ["slashing_pool"]  (singleton)
+#[account]
+#[derive(InitSpace)]
+pub struct SlashingPool {
+    pub mint: Pubkey,
+    pub vault: Pubkey,
+    pub total_slashed: u64,
+    pub bump: u8,
+}
+
+// ─── JobOffer ────────────────────────────────────────────────────────────────
+
+/// seeds: ["job", consumer, job_id_32]
+#[account]
+#[derive(InitSpace)]
 pub struct JobOffer {
     pub consumer: Pubkey,
-    /// Wallet of the provider agent's owner (not the agent PDA key).
     pub provider: Pubkey,
-    /// Caller-supplied unique identifier; also a PDA seed so uniqueness
-    /// is enforced by PDA collision — duplicate job_id from same consumer
-    /// causes `init` on the PDA to fail.
-    pub job_id: [u8; 32],
-    /// USDC amount locked in escrow, in micro-USDC (6 decimals).
-    pub offer_amount: u64,
-    /// Provider must call accept_job before this timestamp.
-    pub acceptance_deadline: i64,
-    /// Provider must call release_escrow before this timestamp,
-    /// after which the consumer may call cancel_expired_job.
-    pub delivery_deadline: i64,
+    pub mint: Pubkey,
+    pub amount: u64,
+    pub escrow_vault: Pubkey,
     pub status: JobStatus,
-    /// Set by release_escrow — hash of delivered work stored on-chain as proof.
-    pub result_hash: Option<[u8; 32]>,
+    pub budget_escrow: Option<Pubkey>,
+    pub depth: u8,
+    pub parent_job: Option<Pubkey>,
+    pub acceptance_deadline: i64,
+    pub delivery_deadline: i64,
+    /// Gates the challenge window.
+    pub challenge_window_seconds: u32,
+    /// Set on release_escrow.
+    pub settlement_pending_at: Option<i64>,
+    pub counter_count: u8,
+    pub created_at: i64,
+    pub bump: u8,
+    // NOTE: all dispute-specific state (stakes, defense window, dispute enum)
+    // lives on the separate Challenge account below, NOT here. Do not add
+    // challenge_stake / defense_stake fields to JobOffer.
+}
+
+// ─── Bounty ──────────────────────────────────────────────────────────────────
+
+/// seeds: ["bounty", poster, bounty_id_32]
+#[account]
+#[derive(InitSpace)]
+pub struct Bounty {
+    pub poster: Pubkey,
+    #[max_len(64)]
+    pub capability_required: String,
+    pub mint: Pubkey,
+    pub max_amount: u64,
+    pub escrow_vault: Pubkey,
+    pub min_reputation: u32,
+    pub status: BountyStatus,
+    pub winning_bid: Option<Pubkey>,
+    pub bidding_deadline: i64,
+    pub delivery_deadline: i64,
+    pub budget_escrow: Option<Pubkey>,
+    pub depth: u8,
+    pub parent_job: Option<Pubkey>,
+    pub bid_count: u16,
+    pub created_at: i64,
     pub bump: u8,
 }
 
-impl JobOffer {
-    // 8  discriminator
-    // 32 consumer
-    // 32 provider
-    // 32 job_id        ([u8;32] — fixed array, no length prefix)
-    // 8  offer_amount
-    // 8  acceptance_deadline
-    // 8  delivery_deadline
-    // 1  status        (fieldless enum → u8 variant tag; 5 variants fit)
-    // 33 result_hash   (Option<[u8;32]> → 1 tag byte + 32 payload)
-    // 1  bump
-    pub const SPACE: usize = 8 + 32 + 32 + 32 + 8 + 8 + 8 + 1 + 33 + 1;
-    // = 163
+// ─── Bid ─────────────────────────────────────────────────────────────────────
+
+/// seeds: ["bid", bounty, bidder]
+#[account]
+#[derive(InitSpace)]
+pub struct Bid {
+    pub bounty: Pubkey,
+    pub bidder: Pubkey,
+    pub price: u64,
+    pub delivery_deadline: i64,
+    pub created_at: i64,
+    pub bump: u8,
+}
+
+// ─── Challenge ───────────────────────────────────────────────────────────────
+
+/// seeds: ["challenge", job]  -- externalized dispute state
+#[account]
+#[derive(InitSpace)]
+pub struct Challenge {
+    pub job: Pubkey,
+    /// = job.consumer at challenge time
+    pub challenger: Pubkey,
+    /// = job.provider
+    pub defender: Pubkey,
+    pub mint: Pubkey,
+    /// ATA owned by this PDA, holds BOTH stakes.
+    pub stake_vault: Pubkey,
+    /// == job.amount
+    pub challenge_stake: u64,
+    /// 0 until defended
+    pub defense_stake: u64,
+    pub state: ChallengeState,
+    pub opened_at: i64,
+    pub defense_deadline: i64,
+    /// 0 if never defended
+    pub defended_at: i64,
+    pub bump: u8,
+}
+
+// ─── BudgetEscrow ────────────────────────────────────────────────────────────
+
+/// seeds: ["budget", requester, budget_id_32]
+///
+/// Part of the account model, but no v1 instruction constructs it --
+/// recursion instructions are deferred to v2. Defined now for a stable model.
+#[account]
+#[derive(InitSpace)]
+#[allow(dead_code)]
+pub struct BudgetEscrow {
+    pub requester: Pubkey,
+    pub root_agent: Pubkey,
+    pub mint: Pubkey,
+    pub amount_initial: u64,
+    pub amount_remaining: u64,
+    pub depth_limit: u8,
+    pub ttl_slot: u64,
+    pub vault: Pubkey,
+    pub bump: u8,
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq, InitSpace)]
+pub enum JobStatus {
+    Proposed,
+    Countered,
+    Accepted,
+    SettlementPending,
+    Challenged,
+    Settled,
+    Rejected,
+    Expired,
+    Abandoned,
+    Burned,
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq, InitSpace)]
+pub enum BountyStatus {
+    Open,
+    Bidding,
+    Awarded,
+    Cancelled,
+}
+
+/// Account closes on resolve, so there is no Resolved variant.
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq, InitSpace)]
+pub enum ChallengeState {
+    Open,
+    Defended,
 }
