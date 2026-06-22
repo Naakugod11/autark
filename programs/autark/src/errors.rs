@@ -55,4 +55,13 @@ pub enum AutarkError {
 
     #[msg("Endpoint URL exceeds the maximum length")]
     EndpointTooLong,
+
+    #[msg("Bid price exceeds the bounty's max amount")]
+    BidPriceTooHigh,
+
+    #[msg("Bidder's completed-job reputation is below the bounty's minimum")]
+    ReputationTooLow,
+
+    #[msg("Bid does not belong to this bounty")]
+    BidNotForBounty,
 }

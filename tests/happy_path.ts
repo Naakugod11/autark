@@ -55,6 +55,18 @@ function randomJobId(): number[] {
   return Array.from(crypto.randomBytes(32));
 }
 
+// mint_whitelist and slashing_pool are global singletons shared by every test
+// file in this mocha run (ts-mocha loads tests/**/*.ts alphabetically against
+// one local validator). Whichever file's `before` hook runs first does the
+// real init; later files just swallow the expected "already in use" error.
+async function ignoreAlreadyInUse(p: Promise<unknown>): Promise<void> {
+  try {
+    await p;
+  } catch (err: any) {
+    if (!/already in use/i.test(err.toString())) throw err;
+  }
+}
+
 async function airdrop(
   connection: web3.Connection,
   pubkey: web3.PublicKey,
@@ -146,14 +158,16 @@ describe("autark happy path: config + identity + stake + targeted hire", () => {
     );
 
     // ── Config: deployer-only setup ──────────────────────────────────────────
-    await program.methods
-      .initMintWhitelist()
-      .accounts({
-        mintWhitelist: mintWhitelistPda(),
-        authority: deployer.publicKey,
-        systemProgram: web3.SystemProgram.programId,
-      })
-      .rpc();
+    await ignoreAlreadyInUse(
+      program.methods
+        .initMintWhitelist()
+        .accounts({
+          mintWhitelist: mintWhitelistPda(),
+          authority: deployer.publicKey,
+          systemProgram: web3.SystemProgram.programId,
+        })
+        .rpc()
+    );
 
     await program.methods
       .addWhitelistedMint(mint)
@@ -168,19 +182,21 @@ describe("autark happy path: config + identity + stake + targeted hire", () => {
       slashingPoolPda(),
       true
     );
-    await program.methods
-      .initSlashingPool()
-      .accounts({
-        mintWhitelist: mintWhitelistPda(),
-        slashingPool: slashingPoolPda(),
-        mint,
-        vault: slashingVault,
-        authority: deployer.publicKey,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-        systemProgram: web3.SystemProgram.programId,
-      })
-      .rpc();
+    await ignoreAlreadyInUse(
+      program.methods
+        .initSlashingPool()
+        .accounts({
+          mintWhitelist: mintWhitelistPda(),
+          slashingPool: slashingPoolPda(),
+          mint,
+          vault: slashingVault,
+          authority: deployer.publicKey,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+          systemProgram: web3.SystemProgram.programId,
+        })
+        .rpc()
+    );
 
     // ── Identity + stake: register the provider's Agent ──────────────────────
     const providerAgentStakeVault = getAssociatedTokenAddressSync(

@@ -101,6 +101,8 @@ pub struct Bounty {
     pub winning_bid: Option<Pubkey>,
     pub bidding_deadline: i64,
     pub delivery_deadline: i64,
+    /// Copied onto the awarded JobOffer's challenge_window_seconds.
+    pub challenge_window_seconds: u32,
     pub budget_escrow: Option<Pubkey>,
     pub depth: u8,
     pub parent_job: Option<Pubkey>,

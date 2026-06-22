@@ -92,4 +92,47 @@ pub mod autark {
     pub fn claim_settlement(ctx: Context<ClaimSettlement>, job_id: [u8; 32]) -> Result<()> {
         instructions::claim_settlement_handler(ctx, job_id)
     }
+
+    // ── Broadcast / bounty happy path ────────────────────────────────────────
+
+    pub fn post_bounty(
+        ctx: Context<PostBounty>,
+        bounty_id: [u8; 32],
+        capability_required: String,
+        max_amount: u64,
+        min_reputation: u32,
+        bidding_deadline: i64,
+        delivery_deadline: i64,
+        challenge_window_seconds: u32,
+    ) -> Result<()> {
+        instructions::post_bounty_handler(
+            ctx,
+            bounty_id,
+            capability_required,
+            max_amount,
+            min_reputation,
+            bidding_deadline,
+            delivery_deadline,
+            challenge_window_seconds,
+        )
+    }
+
+    pub fn submit_bid(ctx: Context<SubmitBid>, price: u64, delivery_deadline: i64) -> Result<()> {
+        instructions::submit_bid_handler(ctx, price, delivery_deadline)
+    }
+
+    /// Produces an Accepted JobOffer that settles via the unchanged
+    /// release_escrow + claim_settlement instructions — no parallel
+    /// bounty-specific settlement path.
+    pub fn accept_bid(ctx: Context<AcceptBid>, bounty_id: [u8; 32]) -> Result<()> {
+        instructions::accept_bid_handler(ctx, bounty_id)
+    }
+
+    pub fn cancel_bounty(ctx: Context<CancelBounty>, bounty_id: [u8; 32]) -> Result<()> {
+        instructions::cancel_bounty_handler(ctx, bounty_id)
+    }
+
+    pub fn close_bid(ctx: Context<CloseBid>) -> Result<()> {
+        instructions::close_bid_handler(ctx)
+    }
 }
