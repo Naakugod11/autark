@@ -21,6 +21,10 @@ pub struct Agent {
     pub last_slash_slot: u64,
     pub created_at: i64,
     pub bump: u8,
+    /// # of non-terminal jobs where this agent is provider.
+    /// Incremented on accept_job, decremented when a job reaches a terminal
+    /// state. stake_withdraw requires open_jobs == 0.
+    pub open_jobs: u16,
 }
 
 // ─── MintWhitelist ───────────────────────────────────────────────────────────
@@ -71,6 +75,10 @@ pub struct JobOffer {
     pub counter_count: u8,
     pub created_at: i64,
     pub bump: u8,
+    /// Earmark recorded at accept_job = min(agent.stake_amount, job.amount).
+    /// Tier 1 only sets/clears it; Tier 2 slashing will read it. Released
+    /// (logically) on settle.
+    pub provider_stake_locked: u64,
     // NOTE: all dispute-specific state (stakes, defense window, dispute enum)
     // lives on the separate Challenge account below, NOT here. Do not add
     // challenge_stake / defense_stake fields to JobOffer.

@@ -1,5 +1,13 @@
+pub const SEED_AGENT: &[u8] = b"agent";
+pub const SEED_JOB: &[u8] = b"job";
+pub const SEED_MINT_WHITELIST: &[u8] = b"mint_whitelist";
+pub const SEED_SLASHING_POOL: &[u8] = b"slashing_pool";
+
 pub const MIN_STAKE_AMOUNT: u64 = 10_000_000; // 10 USDC, 6 decimals
 pub const MAX_CAPABILITIES: usize = 8;
+pub const MAX_CAPABILITY_LEN: usize = 32;
+pub const MAX_ENDPOINT_LEN: usize = 128;
+pub const MAX_WHITELISTED_MINTS: usize = 16;
 pub const MAX_COUNTERS: u8 = 2;
 pub const DEFAULT_CHALLENGE_WINDOW: u32 = 86_400; // 24h seconds (a DEFAULT, not an enforced minimum)
 pub const DEFENSE_WINDOW: i64 = 172_800; // 48h seconds

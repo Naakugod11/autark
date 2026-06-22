@@ -16,4 +16,43 @@ pub enum AutarkError {
 
     #[msg("Mint is not on the whitelist")]
     MintNotWhitelisted,
+
+    #[msg("Mint is already on the whitelist")]
+    MintAlreadyWhitelisted,
+
+    #[msg("Mint whitelist is full")]
+    MintWhitelistFull,
+
+    #[msg("Amount must be greater than zero")]
+    AmountZero,
+
+    #[msg("Deadlines invalid: acceptance must be before delivery")]
+    InvalidDeadlines,
+
+    #[msg("Signer is not the provider for this job")]
+    NotProvider,
+
+    #[msg("Agent has open jobs and cannot withdraw stake")]
+    AgentHasOpenJobs,
+
+    #[msg("Resulting stake would fall below the required minimum")]
+    StakeBelowMinimum,
+
+    #[msg("Acceptance deadline has not yet passed")]
+    AcceptanceWindowNotExpired,
+
+    #[msg("Challenge window has not yet elapsed")]
+    ChallengeWindowNotElapsed,
+
+    #[msg("Insufficient funds for this transfer")]
+    InsufficientFunds,
+
+    #[msg("Agent has too many capability tags")]
+    TooManyCapabilities,
+
+    #[msg("Capability tag exceeds the maximum length")]
+    CapabilityTooLong,
+
+    #[msg("Endpoint URL exceeds the maximum length")]
+    EndpointTooLong,
 }
