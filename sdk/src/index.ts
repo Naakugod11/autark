@@ -17,7 +17,7 @@ import * as path from "path";
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 export const PROGRAM_ID = new PublicKey(
-  "DsSEEH3fuQ3keMZkWiz28yGVDW6VADbqW3ryhe816g1b"
+  "FgkicN5V1fYLFJaY6nH9er3vvCr1nJCQVA9Wy7e3kLhy"
 );
 const USDC_FACTOR = 1_000_000; // 6 decimals — 1 USDC = 1_000_000 micro-USDC
 

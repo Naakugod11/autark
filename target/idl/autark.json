@@ -1,20 +1,14 @@
-/**
- * Program IDL in camelCase format in order to be used in JS/TS.
- *
- * Note that this is only a type helper and is not the actual IDL. The original
- * IDL can be found at `target/idl/agent_bazaar.json`.
- */
-export type AgentBazaar = {
-  "address": "DsSEEH3fuQ3keMZkWiz28yGVDW6VADbqW3ryhe816g1b",
+{
+  "address": "FgkicN5V1fYLFJaY6nH9er3vvCr1nJCQVA9Wy7e3kLhy",
   "metadata": {
-    "name": "agentBazaar",
+    "name": "autark",
     "version": "0.1.0",
     "spec": "0.1.0",
     "description": "Created with Anchor"
   },
   "instructions": [
     {
-      "name": "acceptJob",
+      "name": "accept_job",
       "discriminator": [
         43,
         201,
@@ -27,7 +21,7 @@ export type AgentBazaar = {
       ],
       "accounts": [
         {
-          "name": "jobOffer",
+          "name": "job_offer",
           "docs": [
             "`mut` — we write status: Proposed → Accepted.",
             "",
@@ -62,11 +56,11 @@ export type AgentBazaar = {
               {
                 "kind": "account",
                 "path": "job_offer.consumer",
-                "account": "jobOffer"
+                "account": "JobOffer"
               },
               {
                 "kind": "arg",
-                "path": "jobId"
+                "path": "job_id"
               }
             ]
           }
@@ -80,13 +74,13 @@ export type AgentBazaar = {
           ],
           "signer": true,
           "relations": [
-            "jobOffer"
+            "job_offer"
           ]
         }
       ],
       "args": [
         {
-          "name": "jobId",
+          "name": "job_id",
           "type": {
             "array": [
               "u8",
@@ -97,7 +91,7 @@ export type AgentBazaar = {
       ]
     },
     {
-      "name": "cancelExpiredJob",
+      "name": "cancel_expired_job",
       "discriminator": [
         140,
         225,
@@ -110,7 +104,7 @@ export type AgentBazaar = {
       ],
       "accounts": [
         {
-          "name": "jobOffer",
+          "name": "job_offer",
           "writable": true,
           "pda": {
             "seeds": [
@@ -125,23 +119,23 @@ export type AgentBazaar = {
               {
                 "kind": "account",
                 "path": "job_offer.consumer",
-                "account": "jobOffer"
+                "account": "JobOffer"
               },
               {
                 "kind": "arg",
-                "path": "jobId"
+                "path": "job_id"
               }
             ]
           }
         },
         {
-          "name": "escrowTokenAccount",
+          "name": "escrow_token_account",
           "writable": true,
           "pda": {
             "seeds": [
               {
                 "kind": "account",
-                "path": "jobOffer"
+                "path": "job_offer"
               },
               {
                 "kind": "const",
@@ -182,7 +176,7 @@ export type AgentBazaar = {
               },
               {
                 "kind": "account",
-                "path": "usdcMint"
+                "path": "usdc_mint"
               }
             ],
             "program": {
@@ -225,7 +219,7 @@ export type AgentBazaar = {
           }
         },
         {
-          "name": "consumerTokenAccount",
+          "name": "consumer_token_account",
           "writable": true,
           "pda": {
             "seeds": [
@@ -272,7 +266,7 @@ export type AgentBazaar = {
               },
               {
                 "kind": "account",
-                "path": "usdcMint"
+                "path": "usdc_mint"
               }
             ],
             "program": {
@@ -319,28 +313,28 @@ export type AgentBazaar = {
           "writable": true,
           "signer": true,
           "relations": [
-            "jobOffer"
+            "job_offer"
           ]
         },
         {
-          "name": "usdcMint"
+          "name": "usdc_mint"
         },
         {
-          "name": "tokenProgram",
+          "name": "token_program",
           "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
         {
-          "name": "associatedTokenProgram",
+          "name": "associated_token_program",
           "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         },
         {
-          "name": "systemProgram",
+          "name": "system_program",
           "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
         {
-          "name": "jobId",
+          "name": "job_id",
           "type": {
             "array": [
               "u8",
@@ -351,7 +345,7 @@ export type AgentBazaar = {
       ]
     },
     {
-      "name": "proposeJob",
+      "name": "propose_job",
       "discriminator": [
         104,
         249,
@@ -364,7 +358,7 @@ export type AgentBazaar = {
       ],
       "accounts": [
         {
-          "name": "jobOffer",
+          "name": "job_offer",
           "docs": [
             "The job offer PDA we're creating.",
             "",
@@ -393,13 +387,13 @@ export type AgentBazaar = {
               },
               {
                 "kind": "arg",
-                "path": "jobId"
+                "path": "job_id"
               }
             ]
           }
         },
         {
-          "name": "escrowTokenAccount",
+          "name": "escrow_token_account",
           "docs": [
             "The escrow token account. This is the Associated Token Account (ATA)",
             "whose authority is the `job_offer` PDA — not the consumer, not the",
@@ -426,7 +420,7 @@ export type AgentBazaar = {
             "seeds": [
               {
                 "kind": "account",
-                "path": "jobOffer"
+                "path": "job_offer"
               },
               {
                 "kind": "const",
@@ -467,7 +461,7 @@ export type AgentBazaar = {
               },
               {
                 "kind": "account",
-                "path": "usdcMint"
+                "path": "usdc_mint"
               }
             ],
             "program": {
@@ -510,7 +504,7 @@ export type AgentBazaar = {
           }
         },
         {
-          "name": "providerAgent",
+          "name": "provider_agent",
           "docs": [
             "The provider's registered agent PDA. Loading it as Account<'info, AgentAccount>",
             "(not AccountInfo) causes Anchor to:",
@@ -537,13 +531,13 @@ export type AgentBazaar = {
               {
                 "kind": "account",
                 "path": "provider_agent.owner",
-                "account": "agentAccount"
+                "account": "AgentAccount"
               }
             ]
           }
         },
         {
-          "name": "consumerTokenAccount",
+          "name": "consumer_token_account",
           "docs": [
             "Consumer's USDC token account. Funds will be pulled from here.",
             "",
@@ -606,7 +600,7 @@ export type AgentBazaar = {
               },
               {
                 "kind": "account",
-                "path": "usdcMint"
+                "path": "usdc_mint"
               }
             ],
             "program": {
@@ -659,7 +653,7 @@ export type AgentBazaar = {
           "signer": true
         },
         {
-          "name": "usdcMint",
+          "name": "usdc_mint",
           "docs": [
             "No address constraint — we support any SPL mint (devnet fake USDC",
             "or real USDC). Security: both ATAs must be for this same mint",
@@ -672,14 +666,14 @@ export type AgentBazaar = {
           ]
         },
         {
-          "name": "tokenProgram",
+          "name": "token_program",
           "docs": [
             "Required for the token::transfer CPI."
           ],
           "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
         {
-          "name": "associatedTokenProgram",
+          "name": "associated_token_program",
           "docs": [
             "Required for creating the escrow ATA via the `init` +",
             "`associated_token::*` constraints above."
@@ -687,7 +681,7 @@ export type AgentBazaar = {
           "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         },
         {
-          "name": "systemProgram",
+          "name": "system_program",
           "docs": [
             "Required for the two `init` account creations (job_offer and",
             "escrow_token_account both need system_program::create_account)."
@@ -697,7 +691,7 @@ export type AgentBazaar = {
       ],
       "args": [
         {
-          "name": "jobId",
+          "name": "job_id",
           "type": {
             "array": [
               "u8",
@@ -706,21 +700,21 @@ export type AgentBazaar = {
           }
         },
         {
-          "name": "offerAmount",
+          "name": "offer_amount",
           "type": "u64"
         },
         {
-          "name": "acceptanceDeadline",
+          "name": "acceptance_deadline",
           "type": "i64"
         },
         {
-          "name": "deliveryDeadline",
+          "name": "delivery_deadline",
           "type": "i64"
         }
       ]
     },
     {
-      "name": "registerAgent",
+      "name": "register_agent",
       "discriminator": [
         135,
         157,
@@ -795,7 +789,7 @@ export type AgentBazaar = {
           "signer": true
         },
         {
-          "name": "systemProgram",
+          "name": "system_program",
           "docs": [
             "Anchor requires `System` to be present whenever `init` is used,",
             "because it CPIs to system_program::create_account under the hood."
@@ -817,13 +811,13 @@ export type AgentBazaar = {
           "type": "string"
         },
         {
-          "name": "priceHint",
+          "name": "price_hint",
           "type": "u64"
         }
       ]
     },
     {
-      "name": "rejectJob",
+      "name": "reject_job",
       "discriminator": [
         94,
         15,
@@ -836,7 +830,7 @@ export type AgentBazaar = {
       ],
       "accounts": [
         {
-          "name": "jobOffer",
+          "name": "job_offer",
           "writable": true,
           "pda": {
             "seeds": [
@@ -851,17 +845,17 @@ export type AgentBazaar = {
               {
                 "kind": "account",
                 "path": "job_offer.consumer",
-                "account": "jobOffer"
+                "account": "JobOffer"
               },
               {
                 "kind": "arg",
-                "path": "jobId"
+                "path": "job_id"
               }
             ]
           }
         },
         {
-          "name": "escrowTokenAccount",
+          "name": "escrow_token_account",
           "docs": [
             "Escrow ATA to drain. Same derivation as in release_escrow."
           ],
@@ -870,7 +864,7 @@ export type AgentBazaar = {
             "seeds": [
               {
                 "kind": "account",
-                "path": "jobOffer"
+                "path": "job_offer"
               },
               {
                 "kind": "const",
@@ -911,7 +905,7 @@ export type AgentBazaar = {
               },
               {
                 "kind": "account",
-                "path": "usdcMint"
+                "path": "usdc_mint"
               }
             ],
             "program": {
@@ -954,7 +948,7 @@ export type AgentBazaar = {
           }
         },
         {
-          "name": "consumerTokenAccount",
+          "name": "consumer_token_account",
           "docs": [
             "Consumer's ATA — refund lands here. Consumer already has this ATA",
             "(they sent USDC from it in propose_job), so we don't create it."
@@ -1005,7 +999,7 @@ export type AgentBazaar = {
               },
               {
                 "kind": "account",
-                "path": "usdcMint"
+                "path": "usdc_mint"
               }
             ],
             "program": {
@@ -1061,28 +1055,28 @@ export type AgentBazaar = {
           "name": "provider",
           "signer": true,
           "relations": [
-            "jobOffer"
+            "job_offer"
           ]
         },
         {
-          "name": "usdcMint"
+          "name": "usdc_mint"
         },
         {
-          "name": "tokenProgram",
+          "name": "token_program",
           "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
         {
-          "name": "associatedTokenProgram",
+          "name": "associated_token_program",
           "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         },
         {
-          "name": "systemProgram",
+          "name": "system_program",
           "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
         {
-          "name": "jobId",
+          "name": "job_id",
           "type": {
             "array": [
               "u8",
@@ -1093,7 +1087,7 @@ export type AgentBazaar = {
       ]
     },
     {
-      "name": "releaseEscrow",
+      "name": "release_escrow",
       "discriminator": [
         146,
         253,
@@ -1106,7 +1100,7 @@ export type AgentBazaar = {
       ],
       "accounts": [
         {
-          "name": "jobOffer",
+          "name": "job_offer",
           "writable": true,
           "pda": {
             "seeds": [
@@ -1121,17 +1115,17 @@ export type AgentBazaar = {
               {
                 "kind": "account",
                 "path": "job_offer.consumer",
-                "account": "jobOffer"
+                "account": "JobOffer"
               },
               {
                 "kind": "arg",
-                "path": "jobId"
+                "path": "job_id"
               }
             ]
           }
         },
         {
-          "name": "escrowTokenAccount",
+          "name": "escrow_token_account",
           "docs": [
             "The escrow ATA we created in propose_job. We pull funds from here.",
             "",
@@ -1145,7 +1139,7 @@ export type AgentBazaar = {
             "seeds": [
               {
                 "kind": "account",
-                "path": "jobOffer"
+                "path": "job_offer"
               },
               {
                 "kind": "const",
@@ -1186,7 +1180,7 @@ export type AgentBazaar = {
               },
               {
                 "kind": "account",
-                "path": "usdcMint"
+                "path": "usdc_mint"
               }
             ],
             "program": {
@@ -1229,7 +1223,7 @@ export type AgentBazaar = {
           }
         },
         {
-          "name": "providerTokenAccount",
+          "name": "provider_token_account",
           "docs": [
             "Provider's USDC ATA — funds land here.",
             "Not created here: we require the provider to already have an ATA for",
@@ -1281,7 +1275,7 @@ export type AgentBazaar = {
               },
               {
                 "kind": "account",
-                "path": "usdcMint"
+                "path": "usdc_mint"
               }
             ],
             "program": {
@@ -1328,28 +1322,28 @@ export type AgentBazaar = {
           "writable": true,
           "signer": true,
           "relations": [
-            "jobOffer"
+            "job_offer"
           ]
         },
         {
-          "name": "usdcMint"
+          "name": "usdc_mint"
         },
         {
-          "name": "tokenProgram",
+          "name": "token_program",
           "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
         {
-          "name": "associatedTokenProgram",
+          "name": "associated_token_program",
           "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         },
         {
-          "name": "systemProgram",
+          "name": "system_program",
           "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
         {
-          "name": "jobId",
+          "name": "job_id",
           "type": {
             "array": [
               "u8",
@@ -1358,7 +1352,7 @@ export type AgentBazaar = {
           }
         },
         {
-          "name": "resultHash",
+          "name": "result_hash",
           "type": {
             "array": [
               "u8",
@@ -1371,7 +1365,7 @@ export type AgentBazaar = {
   ],
   "accounts": [
     {
-      "name": "agentAccount",
+      "name": "AgentAccount",
       "discriminator": [
         241,
         119,
@@ -1384,7 +1378,7 @@ export type AgentBazaar = {
       ]
     },
     {
-      "name": "jobOffer",
+      "name": "JobOffer",
       "discriminator": [
         214,
         34,
@@ -1400,73 +1394,73 @@ export type AgentBazaar = {
   "errors": [
     {
       "code": 6000,
-      "name": "nameTooLong",
+      "name": "NameTooLong",
       "msg": "Agent name exceeds 32 characters"
     },
     {
       "code": 6001,
-      "name": "capabilityTooLong",
+      "name": "CapabilityTooLong",
       "msg": "Capability string exceeds 64 characters"
     },
     {
       "code": 6002,
-      "name": "endpointTooLong",
+      "name": "EndpointTooLong",
       "msg": "Endpoint string exceeds 128 characters"
     },
     {
       "code": 6003,
-      "name": "zeroAmount",
+      "name": "ZeroAmount",
       "msg": "Offer amount must be greater than zero"
     },
     {
       "code": 6004,
-      "name": "invalidDeadlines",
+      "name": "InvalidDeadlines",
       "msg": "Deadlines invalid: acceptance must be in the future, delivery must be after acceptance"
     },
     {
       "code": 6005,
-      "name": "invalidProvider",
+      "name": "InvalidProvider",
       "msg": "Signer is not the provider for this job"
     },
     {
       "code": 6006,
-      "name": "invalidConsumer",
+      "name": "InvalidConsumer",
       "msg": "Signer is not the consumer for this job"
     },
     {
       "code": 6007,
-      "name": "jobNotProposed",
+      "name": "JobNotProposed",
       "msg": "Job is not in Proposed state"
     },
     {
       "code": 6008,
-      "name": "jobNotAccepted",
+      "name": "JobNotAccepted",
       "msg": "Job is not in Accepted state"
     },
     {
       "code": 6009,
-      "name": "jobNotCancellable",
+      "name": "JobNotCancellable",
       "msg": "Job is not in a cancellable state (must be Proposed or Accepted)"
     },
     {
       "code": 6010,
-      "name": "jobExpired",
+      "name": "JobExpired",
       "msg": "Job offer deadline has passed"
     },
     {
       "code": 6011,
-      "name": "jobNotExpired",
+      "name": "JobNotExpired",
       "msg": "Deadline has not passed yet"
     },
     {
       "code": 6012,
-      "name": "insufficientFunds",
+      "name": "InsufficientFunds",
       "msg": "Consumer has insufficient USDC balance"
     }
   ],
   "types": [
     {
-      "name": "agentAccount",
+      "name": "AgentAccount",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1487,7 +1481,7 @@ export type AgentBazaar = {
             "type": "string"
           },
           {
-            "name": "priceHint",
+            "name": "price_hint",
             "docs": [
               "Suggested USDC price in micro-USDC (6 decimals), e.g. 1_000_000 = $1."
             ],
@@ -1501,7 +1495,7 @@ export type AgentBazaar = {
       }
     },
     {
-      "name": "jobOffer",
+      "name": "JobOffer",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1517,7 +1511,7 @@ export type AgentBazaar = {
             "type": "pubkey"
           },
           {
-            "name": "jobId",
+            "name": "job_id",
             "docs": [
               "Caller-supplied unique identifier; also a PDA seed so uniqueness",
               "is enforced by PDA collision — duplicate job_id from same consumer",
@@ -1531,21 +1525,21 @@ export type AgentBazaar = {
             }
           },
           {
-            "name": "offerAmount",
+            "name": "offer_amount",
             "docs": [
               "USDC amount locked in escrow, in micro-USDC (6 decimals)."
             ],
             "type": "u64"
           },
           {
-            "name": "acceptanceDeadline",
+            "name": "acceptance_deadline",
             "docs": [
               "Provider must call accept_job before this timestamp."
             ],
             "type": "i64"
           },
           {
-            "name": "deliveryDeadline",
+            "name": "delivery_deadline",
             "docs": [
               "Provider must call release_escrow before this timestamp,",
               "after which the consumer may call cancel_expired_job."
@@ -1556,12 +1550,12 @@ export type AgentBazaar = {
             "name": "status",
             "type": {
               "defined": {
-                "name": "jobStatus"
+                "name": "JobStatus"
               }
             }
           },
           {
-            "name": "resultHash",
+            "name": "result_hash",
             "docs": [
               "Set by release_escrow — hash of delivered work stored on-chain as proof."
             ],
@@ -1582,27 +1576,27 @@ export type AgentBazaar = {
       }
     },
     {
-      "name": "jobStatus",
+      "name": "JobStatus",
       "type": {
         "kind": "enum",
         "variants": [
           {
-            "name": "proposed"
+            "name": "Proposed"
           },
           {
-            "name": "accepted"
+            "name": "Accepted"
           },
           {
-            "name": "settled"
+            "name": "Settled"
           },
           {
-            "name": "rejected"
+            "name": "Rejected"
           },
           {
-            "name": "expired"
+            "name": "Expired"
           }
         ]
       }
     }
   ]
-};
+}

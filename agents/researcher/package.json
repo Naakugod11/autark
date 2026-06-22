@@ -1,5 +1,5 @@
 {
-  "name": "@agent-bazaar/researcher",
+  "name": "@autark/researcher",
   "version": "0.1.0",
   "description": "Token Researcher agent — Claude-powered agent that discovers and hires other agents",
   "scripts": {

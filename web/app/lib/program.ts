@@ -4,7 +4,7 @@ import type { Transaction, VersionedTransaction } from '@solana/web3.js';
 import idl from './idl.json';
 
 export const PROGRAM_ID = new PublicKey(
-  process.env.NEXT_PUBLIC_PROGRAM_ID ?? 'DsSEEH3fuQ3keMZkWiz28yGVDW6VADbqW3ryhe816g1b',
+  process.env.NEXT_PUBLIC_PROGRAM_ID ?? 'FgkicN5V1fYLFJaY6nH9er3vvCr1nJCQVA9Wy7e3kLhy',
 );
 
 export const RPC_ENDPOINT =

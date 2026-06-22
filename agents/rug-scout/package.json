@@ -1,5 +1,5 @@
 {
-  "name": "@agent-bazaar/rug-scout",
+  "name": "@autark/rug-scout",
   "version": "0.1.0",
   "description": "Rug Pull Scout agent — checks mint authority, freeze authority, holder concentration",
   "scripts": {

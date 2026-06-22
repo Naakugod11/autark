@@ -1,14 +1,20 @@
-{
-  "address": "DsSEEH3fuQ3keMZkWiz28yGVDW6VADbqW3ryhe816g1b",
+/**
+ * Program IDL in camelCase format in order to be used in JS/TS.
+ *
+ * Note that this is only a type helper and is not the actual IDL. The original
+ * IDL can be found at `target/idl/autark.json`.
+ */
+export type Autark = {
+  "address": "FgkicN5V1fYLFJaY6nH9er3vvCr1nJCQVA9Wy7e3kLhy",
   "metadata": {
-    "name": "agent_bazaar",
+    "name": "autark",
     "version": "0.1.0",
     "spec": "0.1.0",
     "description": "Created with Anchor"
   },
   "instructions": [
     {
-      "name": "accept_job",
+      "name": "acceptJob",
       "discriminator": [
         43,
         201,
@@ -21,7 +27,7 @@
       ],
       "accounts": [
         {
-          "name": "job_offer",
+          "name": "jobOffer",
           "docs": [
             "`mut` — we write status: Proposed → Accepted.",
             "",
@@ -56,11 +62,11 @@
               {
                 "kind": "account",
                 "path": "job_offer.consumer",
-                "account": "JobOffer"
+                "account": "jobOffer"
               },
               {
                 "kind": "arg",
-                "path": "job_id"
+                "path": "jobId"
               }
             ]
           }
@@ -74,13 +80,13 @@
           ],
           "signer": true,
           "relations": [
-            "job_offer"
+            "jobOffer"
           ]
         }
       ],
       "args": [
         {
-          "name": "job_id",
+          "name": "jobId",
           "type": {
             "array": [
               "u8",
@@ -91,7 +97,7 @@
       ]
     },
     {
-      "name": "cancel_expired_job",
+      "name": "cancelExpiredJob",
       "discriminator": [
         140,
         225,
@@ -104,7 +110,7 @@
       ],
       "accounts": [
         {
-          "name": "job_offer",
+          "name": "jobOffer",
           "writable": true,
           "pda": {
             "seeds": [
@@ -119,23 +125,23 @@
               {
                 "kind": "account",
                 "path": "job_offer.consumer",
-                "account": "JobOffer"
+                "account": "jobOffer"
               },
               {
                 "kind": "arg",
-                "path": "job_id"
+                "path": "jobId"
               }
             ]
           }
         },
         {
-          "name": "escrow_token_account",
+          "name": "escrowTokenAccount",
           "writable": true,
           "pda": {
             "seeds": [
               {
                 "kind": "account",
-                "path": "job_offer"
+                "path": "jobOffer"
               },
               {
                 "kind": "const",
@@ -176,7 +182,7 @@
               },
               {
                 "kind": "account",
-                "path": "usdc_mint"
+                "path": "usdcMint"
               }
             ],
             "program": {
@@ -219,7 +225,7 @@
           }
         },
         {
-          "name": "consumer_token_account",
+          "name": "consumerTokenAccount",
           "writable": true,
           "pda": {
             "seeds": [
@@ -266,7 +272,7 @@
               },
               {
                 "kind": "account",
-                "path": "usdc_mint"
+                "path": "usdcMint"
               }
             ],
             "program": {
@@ -313,28 +319,28 @@
           "writable": true,
           "signer": true,
           "relations": [
-            "job_offer"
+            "jobOffer"
           ]
         },
         {
-          "name": "usdc_mint"
+          "name": "usdcMint"
         },
         {
-          "name": "token_program",
+          "name": "tokenProgram",
           "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
         {
-          "name": "associated_token_program",
+          "name": "associatedTokenProgram",
           "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         },
         {
-          "name": "system_program",
+          "name": "systemProgram",
           "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
         {
-          "name": "job_id",
+          "name": "jobId",
           "type": {
             "array": [
               "u8",
@@ -345,7 +351,7 @@
       ]
     },
     {
-      "name": "propose_job",
+      "name": "proposeJob",
       "discriminator": [
         104,
         249,
@@ -358,7 +364,7 @@
       ],
       "accounts": [
         {
-          "name": "job_offer",
+          "name": "jobOffer",
           "docs": [
             "The job offer PDA we're creating.",
             "",
@@ -387,13 +393,13 @@
               },
               {
                 "kind": "arg",
-                "path": "job_id"
+                "path": "jobId"
               }
             ]
           }
         },
         {
-          "name": "escrow_token_account",
+          "name": "escrowTokenAccount",
           "docs": [
             "The escrow token account. This is the Associated Token Account (ATA)",
             "whose authority is the `job_offer` PDA — not the consumer, not the",
@@ -420,7 +426,7 @@
             "seeds": [
               {
                 "kind": "account",
-                "path": "job_offer"
+                "path": "jobOffer"
               },
               {
                 "kind": "const",
@@ -461,7 +467,7 @@
               },
               {
                 "kind": "account",
-                "path": "usdc_mint"
+                "path": "usdcMint"
               }
             ],
             "program": {
@@ -504,7 +510,7 @@
           }
         },
         {
-          "name": "provider_agent",
+          "name": "providerAgent",
           "docs": [
             "The provider's registered agent PDA. Loading it as Account<'info, AgentAccount>",
             "(not AccountInfo) causes Anchor to:",
@@ -531,13 +537,13 @@
               {
                 "kind": "account",
                 "path": "provider_agent.owner",
-                "account": "AgentAccount"
+                "account": "agentAccount"
               }
             ]
           }
         },
         {
-          "name": "consumer_token_account",
+          "name": "consumerTokenAccount",
           "docs": [
             "Consumer's USDC token account. Funds will be pulled from here.",
             "",
@@ -600,7 +606,7 @@
               },
               {
                 "kind": "account",
-                "path": "usdc_mint"
+                "path": "usdcMint"
               }
             ],
             "program": {
@@ -653,7 +659,7 @@
           "signer": true
         },
         {
-          "name": "usdc_mint",
+          "name": "usdcMint",
           "docs": [
             "No address constraint — we support any SPL mint (devnet fake USDC",
             "or real USDC). Security: both ATAs must be for this same mint",
@@ -666,14 +672,14 @@
           ]
         },
         {
-          "name": "token_program",
+          "name": "tokenProgram",
           "docs": [
             "Required for the token::transfer CPI."
           ],
           "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
         {
-          "name": "associated_token_program",
+          "name": "associatedTokenProgram",
           "docs": [
             "Required for creating the escrow ATA via the `init` +",
             "`associated_token::*` constraints above."
@@ -681,7 +687,7 @@
           "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         },
         {
-          "name": "system_program",
+          "name": "systemProgram",
           "docs": [
             "Required for the two `init` account creations (job_offer and",
             "escrow_token_account both need system_program::create_account)."
@@ -691,7 +697,7 @@
       ],
       "args": [
         {
-          "name": "job_id",
+          "name": "jobId",
           "type": {
             "array": [
               "u8",
@@ -700,21 +706,21 @@
           }
         },
         {
-          "name": "offer_amount",
+          "name": "offerAmount",
           "type": "u64"
         },
         {
-          "name": "acceptance_deadline",
+          "name": "acceptanceDeadline",
           "type": "i64"
         },
         {
-          "name": "delivery_deadline",
+          "name": "deliveryDeadline",
           "type": "i64"
         }
       ]
     },
     {
-      "name": "register_agent",
+      "name": "registerAgent",
       "discriminator": [
         135,
         157,
@@ -789,7 +795,7 @@
           "signer": true
         },
         {
-          "name": "system_program",
+          "name": "systemProgram",
           "docs": [
             "Anchor requires `System` to be present whenever `init` is used,",
             "because it CPIs to system_program::create_account under the hood."
@@ -811,13 +817,13 @@
           "type": "string"
         },
         {
-          "name": "price_hint",
+          "name": "priceHint",
           "type": "u64"
         }
       ]
     },
     {
-      "name": "reject_job",
+      "name": "rejectJob",
       "discriminator": [
         94,
         15,
@@ -830,7 +836,7 @@
       ],
       "accounts": [
         {
-          "name": "job_offer",
+          "name": "jobOffer",
           "writable": true,
           "pda": {
             "seeds": [
@@ -845,17 +851,17 @@
               {
                 "kind": "account",
                 "path": "job_offer.consumer",
-                "account": "JobOffer"
+                "account": "jobOffer"
               },
               {
                 "kind": "arg",
-                "path": "job_id"
+                "path": "jobId"
               }
             ]
           }
         },
         {
-          "name": "escrow_token_account",
+          "name": "escrowTokenAccount",
           "docs": [
             "Escrow ATA to drain. Same derivation as in release_escrow."
           ],
@@ -864,7 +870,7 @@
             "seeds": [
               {
                 "kind": "account",
-                "path": "job_offer"
+                "path": "jobOffer"
               },
               {
                 "kind": "const",
@@ -905,7 +911,7 @@
               },
               {
                 "kind": "account",
-                "path": "usdc_mint"
+                "path": "usdcMint"
               }
             ],
             "program": {
@@ -948,7 +954,7 @@
           }
         },
         {
-          "name": "consumer_token_account",
+          "name": "consumerTokenAccount",
           "docs": [
             "Consumer's ATA — refund lands here. Consumer already has this ATA",
             "(they sent USDC from it in propose_job), so we don't create it."
@@ -999,7 +1005,7 @@
               },
               {
                 "kind": "account",
-                "path": "usdc_mint"
+                "path": "usdcMint"
               }
             ],
             "program": {
@@ -1055,28 +1061,28 @@
           "name": "provider",
           "signer": true,
           "relations": [
-            "job_offer"
+            "jobOffer"
           ]
         },
         {
-          "name": "usdc_mint"
+          "name": "usdcMint"
         },
         {
-          "name": "token_program",
+          "name": "tokenProgram",
           "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
         {
-          "name": "associated_token_program",
+          "name": "associatedTokenProgram",
           "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         },
         {
-          "name": "system_program",
+          "name": "systemProgram",
           "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
         {
-          "name": "job_id",
+          "name": "jobId",
           "type": {
             "array": [
               "u8",
@@ -1087,7 +1093,7 @@
       ]
     },
     {
-      "name": "release_escrow",
+      "name": "releaseEscrow",
       "discriminator": [
         146,
         253,
@@ -1100,7 +1106,7 @@
       ],
       "accounts": [
         {
-          "name": "job_offer",
+          "name": "jobOffer",
           "writable": true,
           "pda": {
             "seeds": [
@@ -1115,17 +1121,17 @@
               {
                 "kind": "account",
                 "path": "job_offer.consumer",
-                "account": "JobOffer"
+                "account": "jobOffer"
               },
               {
                 "kind": "arg",
-                "path": "job_id"
+                "path": "jobId"
               }
             ]
           }
         },
         {
-          "name": "escrow_token_account",
+          "name": "escrowTokenAccount",
           "docs": [
             "The escrow ATA we created in propose_job. We pull funds from here.",
             "",
@@ -1139,7 +1145,7 @@
             "seeds": [
               {
                 "kind": "account",
-                "path": "job_offer"
+                "path": "jobOffer"
               },
               {
                 "kind": "const",
@@ -1180,7 +1186,7 @@
               },
               {
                 "kind": "account",
-                "path": "usdc_mint"
+                "path": "usdcMint"
               }
             ],
             "program": {
@@ -1223,7 +1229,7 @@
           }
         },
         {
-          "name": "provider_token_account",
+          "name": "providerTokenAccount",
           "docs": [
             "Provider's USDC ATA — funds land here.",
             "Not created here: we require the provider to already have an ATA for",
@@ -1275,7 +1281,7 @@
               },
               {
                 "kind": "account",
-                "path": "usdc_mint"
+                "path": "usdcMint"
               }
             ],
             "program": {
@@ -1322,28 +1328,28 @@
           "writable": true,
           "signer": true,
           "relations": [
-            "job_offer"
+            "jobOffer"
           ]
         },
         {
-          "name": "usdc_mint"
+          "name": "usdcMint"
         },
         {
-          "name": "token_program",
+          "name": "tokenProgram",
           "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
         {
-          "name": "associated_token_program",
+          "name": "associatedTokenProgram",
           "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         },
         {
-          "name": "system_program",
+          "name": "systemProgram",
           "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
         {
-          "name": "job_id",
+          "name": "jobId",
           "type": {
             "array": [
               "u8",
@@ -1352,7 +1358,7 @@
           }
         },
         {
-          "name": "result_hash",
+          "name": "resultHash",
           "type": {
             "array": [
               "u8",
@@ -1365,7 +1371,7 @@
   ],
   "accounts": [
     {
-      "name": "AgentAccount",
+      "name": "agentAccount",
       "discriminator": [
         241,
         119,
@@ -1378,7 +1384,7 @@
       ]
     },
     {
-      "name": "JobOffer",
+      "name": "jobOffer",
       "discriminator": [
         214,
         34,
@@ -1394,73 +1400,73 @@
   "errors": [
     {
       "code": 6000,
-      "name": "NameTooLong",
+      "name": "nameTooLong",
       "msg": "Agent name exceeds 32 characters"
     },
     {
       "code": 6001,
-      "name": "CapabilityTooLong",
+      "name": "capabilityTooLong",
       "msg": "Capability string exceeds 64 characters"
     },
     {
       "code": 6002,
-      "name": "EndpointTooLong",
+      "name": "endpointTooLong",
       "msg": "Endpoint string exceeds 128 characters"
     },
     {
       "code": 6003,
-      "name": "ZeroAmount",
+      "name": "zeroAmount",
       "msg": "Offer amount must be greater than zero"
     },
     {
       "code": 6004,
-      "name": "InvalidDeadlines",
+      "name": "invalidDeadlines",
       "msg": "Deadlines invalid: acceptance must be in the future, delivery must be after acceptance"
     },
     {
       "code": 6005,
-      "name": "InvalidProvider",
+      "name": "invalidProvider",
       "msg": "Signer is not the provider for this job"
     },
     {
       "code": 6006,
-      "name": "InvalidConsumer",
+      "name": "invalidConsumer",
       "msg": "Signer is not the consumer for this job"
     },
     {
       "code": 6007,
-      "name": "JobNotProposed",
+      "name": "jobNotProposed",
       "msg": "Job is not in Proposed state"
     },
     {
       "code": 6008,
-      "name": "JobNotAccepted",
+      "name": "jobNotAccepted",
       "msg": "Job is not in Accepted state"
     },
     {
       "code": 6009,
-      "name": "JobNotCancellable",
+      "name": "jobNotCancellable",
       "msg": "Job is not in a cancellable state (must be Proposed or Accepted)"
     },
     {
       "code": 6010,
-      "name": "JobExpired",
+      "name": "jobExpired",
       "msg": "Job offer deadline has passed"
     },
     {
       "code": 6011,
-      "name": "JobNotExpired",
+      "name": "jobNotExpired",
       "msg": "Deadline has not passed yet"
     },
     {
       "code": 6012,
-      "name": "InsufficientFunds",
+      "name": "insufficientFunds",
       "msg": "Consumer has insufficient USDC balance"
     }
   ],
   "types": [
     {
-      "name": "AgentAccount",
+      "name": "agentAccount",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1481,7 +1487,7 @@
             "type": "string"
           },
           {
-            "name": "price_hint",
+            "name": "priceHint",
             "docs": [
               "Suggested USDC price in micro-USDC (6 decimals), e.g. 1_000_000 = $1."
             ],
@@ -1495,7 +1501,7 @@
       }
     },
     {
-      "name": "JobOffer",
+      "name": "jobOffer",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1511,7 +1517,7 @@
             "type": "pubkey"
           },
           {
-            "name": "job_id",
+            "name": "jobId",
             "docs": [
               "Caller-supplied unique identifier; also a PDA seed so uniqueness",
               "is enforced by PDA collision — duplicate job_id from same consumer",
@@ -1525,21 +1531,21 @@
             }
           },
           {
-            "name": "offer_amount",
+            "name": "offerAmount",
             "docs": [
               "USDC amount locked in escrow, in micro-USDC (6 decimals)."
             ],
             "type": "u64"
           },
           {
-            "name": "acceptance_deadline",
+            "name": "acceptanceDeadline",
             "docs": [
               "Provider must call accept_job before this timestamp."
             ],
             "type": "i64"
           },
           {
-            "name": "delivery_deadline",
+            "name": "deliveryDeadline",
             "docs": [
               "Provider must call release_escrow before this timestamp,",
               "after which the consumer may call cancel_expired_job."
@@ -1550,12 +1556,12 @@
             "name": "status",
             "type": {
               "defined": {
-                "name": "JobStatus"
+                "name": "jobStatus"
               }
             }
           },
           {
-            "name": "result_hash",
+            "name": "resultHash",
             "docs": [
               "Set by release_escrow — hash of delivered work stored on-chain as proof."
             ],
@@ -1576,27 +1582,27 @@
       }
     },
     {
-      "name": "JobStatus",
+      "name": "jobStatus",
       "type": {
         "kind": "enum",
         "variants": [
           {
-            "name": "Proposed"
+            "name": "proposed"
           },
           {
-            "name": "Accepted"
+            "name": "accepted"
           },
           {
-            "name": "Settled"
+            "name": "settled"
           },
           {
-            "name": "Rejected"
+            "name": "rejected"
           },
           {
-            "name": "Expired"
+            "name": "expired"
           }
         ]
       }
     }
   ]
-}
+};

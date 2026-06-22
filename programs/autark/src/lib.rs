@@ -10,10 +10,10 @@ pub use error::*;
 pub use instructions::*;
 pub use state::*;
 
-declare_id!("DsSEEH3fuQ3keMZkWiz28yGVDW6VADbqW3ryhe816g1b");
+declare_id!("FgkicN5V1fYLFJaY6nH9er3vvCr1nJCQVA9Wy7e3kLhy");
 
 #[program]
-pub mod agent_bazaar {
+pub mod autark {
     use super::*;
 
     pub fn register_agent(

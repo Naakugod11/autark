@@ -116,7 +116,7 @@ async function main() {
   const shared = {
     ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY!,
     SOLANA_RPC_URL: RPC_URL,
-    PROGRAM_ID: "DsSEEH3fuQ3keMZkWiz28yGVDW6VADbqW3ryhe816g1b",
+    PROGRAM_ID: "FgkicN5V1fYLFJaY6nH9er3vvCr1nJCQVA9Wy7e3kLhy",
     USDC_MINT: process.env.USDC_MINT!,
   };
 

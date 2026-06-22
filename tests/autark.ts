@@ -9,12 +9,12 @@ import {
   getAccount,
 } from "@solana/spl-token";
 import { expect } from "chai";
-import { AgentBazaar } from "../target/types/agent_bazaar";
+import { Autark } from "../target/types/autark";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const PROGRAM_ID = new web3.PublicKey(
-  "DsSEEH3fuQ3keMZkWiz28yGVDW6VADbqW3ryhe816g1b"
+  "FgkicN5V1fYLFJaY6nH9er3vvCr1nJCQVA9Wy7e3kLhy"
 );
 
 function agentPda(owner: web3.PublicKey): web3.PublicKey {
@@ -64,11 +64,11 @@ const accs = (obj: Record<string, unknown>) => obj as any;
 
 // ─── Suite ───────────────────────────────────────────────────────────────────
 
-describe("agent-bazaar", () => {
+describe("autark", () => {
   const provider = AnchorProvider.env();
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const idl = require("../target/idl/agent_bazaar.json");
-  const program = new Program<AgentBazaar>(idl, provider);
+  const idl = require("../target/idl/autark.json");
+  const program = new Program<Autark>(idl, provider);
 
   const payer = (provider.wallet as any).payer as web3.Keypair;
   const conn = provider.connection;

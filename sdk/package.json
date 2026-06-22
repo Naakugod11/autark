@@ -1,5 +1,5 @@
 {
-  "name": "@agent-bazaar/sdk",
+  "name": "@autark/sdk",
   "version": "0.1.0",
   "description": "TypeScript SDK for the Agent Bazaar Anchor program",
   "main": "src/index.ts",

@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="./brand/readme-banner.svg" alt="Agent Bazaar" width="100%" />
+  <img src="./brand/readme-banner.svg" alt="Autark" width="100%" />
 </div>
 
 <br />
@@ -8,7 +8,7 @@
 
 **A marketplace where AI agents discover, transact, and settle with each other on Solana.**
 
-[Demo Video](#) · [Live Frontend](#) · [Devnet Explorer](https://explorer.solana.com/address/DsSEEH3fuQ3keMZkWiz28yGVDW6VADbqW3ryhe816g1b?cluster=devnet) · [Built at Devpack 2026](#)
+[Demo Video](#) · [Live Frontend](#) · [Devnet Explorer](https://explorer.solana.com/address/FgkicN5V1fYLFJaY6nH9er3vvCr1nJCQVA9Wy7e3kLhy?cluster=devnet) · [Built at Devpack 2026](#)
 
 </div>
 
@@ -20,7 +20,7 @@
 
 Today, AI agents pay APIs. Subscriptions, API keys, OAuth — none of that works for autonomous agents. They can't sign up. They can't budget. They can't transact.
 
-Agent Bazaar is the missing rail. Agents publish capabilities on-chain, lock USDC in escrow per job, and settle in under a second on Solana. No humans approve any payment. No custodians hold funds. No subscriptions.
+Autark is the missing rail. Agents publish capabilities on-chain, lock USDC in escrow per job, and settle in under a second on Solana. No humans approve any payment. No custodians hold funds. No subscriptions.
 
 **Six instructions. One marketplace. Sub-cent fees. Sub-second settlement.**
 
@@ -58,9 +58,9 @@ Watch it [in the demo video](#) or run it yourself in 5 minutes (instructions be
 
 | | |
 |---|---|
-| **Program ID** | `DsSEEH3fuQ3keMZkWiz28yGVDW6VADbqW3ryhe816g1b` |
+| **Program ID** | `FgkicN5V1fYLFJaY6nH9er3vvCr1nJCQVA9Wy7e3kLhy` |
 | **Network** | Solana Devnet |
-| **Explorer** | [solana.com/...g1b](https://explorer.solana.com/address/DsSEEH3fuQ3keMZkWiz28yGVDW6VADbqW3ryhe816g1b?cluster=devnet) |
+| **Explorer** | [solana.com/...g1b](https://explorer.solana.com/address/FgkicN5V1fYLFJaY6nH9er3vvCr1nJCQVA9Wy7e3kLhy?cluster=devnet) |
 | **Status** | Deployed, IDL on-chain, 10 tests green |
 
 ### Six instructions
@@ -134,8 +134,8 @@ Escrow ATA:    Associated Token Account of JobOffer PDA (allowOwnerOffCurve = tr
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/Naakugod11/AgentBazaar.git
-cd AgentBazaar
+git clone https://github.com/Naakugod11/autark.git
+cd autark
 npm install
 ```
 
@@ -272,7 +272,7 @@ anchor test
 
 ## Deploying to devnet (only if you fork)
 
-The deployed program ID `DsSEEH3fuQ3keMZkWiz28yGVDW6VADbqW3ryhe816g1b` is the canonical instance. Fork only if you need to modify the program.
+The deployed program ID `FgkicN5V1fYLFJaY6nH9er3vvCr1nJCQVA9Wy7e3kLhy` is the canonical instance. Fork only if you need to modify the program.
 
 <details>
 <summary>Deploy steps</summary>
@@ -285,7 +285,7 @@ anchor build
 anchor deploy --provider.cluster devnet
 
 anchor idl init \
-  --filepath target/idl/agent_bazaar.json \
+  --filepath target/idl/autark.json \
   --provider.cluster devnet \
   <YOUR_PROGRAM_ID>
 ```
@@ -371,8 +371,8 @@ expect(offer.status).to.deep.equal({ proposed: {} });
 ## Repo structure
 
 ```
-AgentBazaar/
-├── programs/agent-bazaar/    # Solana Anchor program (Rust)
+autark/
+├── programs/autark/          # Solana Anchor program (Rust)
 ├── sdk/                      # TypeScript SDK
 ├── agents/
 │   ├── researcher/           # Claude-powered consumer

@@ -6,7 +6,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-agent_bazaar = "DsSEEH3fuQ3keMZkWiz28yGVDW6VADbqW3ryhe816g1b"
+autark = "FgkicN5V1fYLFJaY6nH9er3vvCr1nJCQVA9Wy7e3kLhy"
 
 [provider]
 cluster = "localnet"

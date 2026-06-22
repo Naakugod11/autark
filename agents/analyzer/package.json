@@ -1,5 +1,5 @@
 {
-  "name": "@agent-bazaar/analyzer",
+  "name": "@autark/analyzer",
   "version": "0.1.0",
   "description": "Wallet Analyzer agent — HTTP server that accepts on-chain jobs",
   "scripts": {
