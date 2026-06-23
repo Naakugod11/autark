@@ -7,6 +7,7 @@ use crate::constants::{
     SLASH_PCT_LOST_CHALLENGE,
 };
 use crate::errors::AutarkError;
+use crate::instructions::slashing::slash_provider_stake;
 use crate::state::{Agent, Challenge, ChallengeState, JobOffer, JobStatus, SlashingPool};
 
 // ─── Events ──────────────────────────────────────────────────────────────────
@@ -321,36 +322,20 @@ pub fn resolve_challenge_handler(ctx: Context<ResolveChallenge>, job_id: [u8; 32
         );
         let total_slashed = earmarked.saturating_add(extra);
 
-        if total_slashed > 0 {
-            let agent_owner = ctx.accounts.provider_agent.owner;
-            let agent_bump = ctx.accounts.provider_agent.bump;
-            let agent_signer_seeds: &[&[u8]] =
-                &[SEED_AGENT, agent_owner.as_ref(), &[agent_bump]];
-
-            token::transfer(
-                CpiContext::new_with_signer(
-                    ctx.accounts.token_program.key(),
-                    Transfer {
-                        from: ctx.accounts.provider_stake_vault.to_account_info(),
-                        to: ctx.accounts.slashing_pool_vault.to_account_info(),
-                        authority: ctx.accounts.provider_agent.to_account_info(),
-                    },
-                    &[agent_signer_seeds],
-                ),
-                total_slashed,
-            )?;
-        }
-        slashed = total_slashed;
+        slashed = slash_provider_stake(
+            &ctx.accounts.token_program,
+            &ctx.accounts.provider_stake_vault,
+            &ctx.accounts.slashing_pool_vault,
+            &mut ctx.accounts.provider_agent,
+            &mut ctx.accounts.slashing_pool,
+            total_slashed,
+        )?;
 
         let provider_agent = &mut ctx.accounts.provider_agent;
-        provider_agent.stake_amount = provider_agent.stake_amount.saturating_sub(total_slashed);
         provider_agent.score_failed = provider_agent.score_failed.saturating_add(1);
         provider_agent.slash_events = provider_agent.slash_events.saturating_add(1);
         provider_agent.last_slash_slot = Clock::get()?.slot;
         provider_agent.open_jobs = provider_agent.open_jobs.saturating_sub(1);
-
-        let slashing_pool = &mut ctx.accounts.slashing_pool;
-        slashing_pool.total_slashed = slashing_pool.total_slashed.saturating_add(total_slashed);
     } else {
         // (B) defended — mutual assured destruction. Split principal, burn
         // both stakes. No additional slash on the provider's staked vault:

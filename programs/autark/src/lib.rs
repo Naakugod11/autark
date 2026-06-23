@@ -93,6 +93,18 @@ pub mod autark {
         instructions::claim_settlement_handler(ctx, job_id)
     }
 
+    /// Honest voluntary decline, Proposed only — no slash.
+    pub fn reject_job(ctx: Context<RejectJob>, job_id: [u8; 32]) -> Result<()> {
+        instructions::reject_job_handler(ctx, job_id)
+    }
+
+    /// Anyone may crank this. Branches on Proposed->Expired (ghosted
+    /// acceptance) vs Accepted->Abandoned (ghosted delivery) — see
+    /// expiry.rs for the two slash formulas.
+    pub fn cancel_expired_job(ctx: Context<CancelExpiredJob>, job_id: [u8; 32]) -> Result<()> {
+        instructions::cancel_expired_job_handler(ctx, job_id)
+    }
+
     // ── Broadcast / bounty happy path ────────────────────────────────────────
 
     pub fn post_bounty(

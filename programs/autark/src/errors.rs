@@ -76,4 +76,7 @@ pub enum AutarkError {
 
     #[msg("Defense window has not yet elapsed")]
     DefenseWindowNotElapsed,
+
+    #[msg("Delivery deadline has not yet passed")]
+    DeliveryWindowNotExpired,
 }
