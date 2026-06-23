@@ -347,6 +347,7 @@ describe("autark expiry: reject_job + cancel_expired_job", () => {
             new BN(amount),
             new BN(now + acceptanceOffset),
             new BN(now + deliveryOffset),
+            0,
             0
           )
           .accounts({

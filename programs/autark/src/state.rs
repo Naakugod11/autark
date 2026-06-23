@@ -70,6 +70,10 @@ pub struct JobOffer {
     pub delivery_deadline: i64,
     /// Gates the challenge window.
     pub challenge_window_seconds: u32,
+    /// Gates how long a provider has to defend an opened challenge before
+    /// resolve_challenge can be cranked. Parallels challenge_window_seconds:
+    /// a per-job param, not a hardcoded constant.
+    pub defense_window_seconds: u32,
     /// Set on release_escrow.
     pub settlement_pending_at: Option<i64>,
     pub counter_count: u8,
@@ -103,6 +107,8 @@ pub struct Bounty {
     pub delivery_deadline: i64,
     /// Copied onto the awarded JobOffer's challenge_window_seconds.
     pub challenge_window_seconds: u32,
+    /// Copied onto the awarded JobOffer's defense_window_seconds.
+    pub defense_window_seconds: u32,
     pub budget_escrow: Option<Pubkey>,
     pub depth: u8,
     pub parent_job: Option<Pubkey>,

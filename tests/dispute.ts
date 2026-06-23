@@ -1,11 +1,13 @@
 // Tier 2 dispute/slash tests run against solana-bankrun (an in-process
 // LiteSVM-backed validator), NOT the live solana-test-validator used by
-// happy_path.ts/bounty.ts. The reason: resolve_challenge's defense window is
-// DEFENSE_WINDOW = 172_800s (48h), hardcoded in the program — there is no way
-// to wait that out in a live validator (and no live-RPC clock-warp exists for
-// solana-test-validator). bankrun's `ProgramTestContext.setClock()` lets us
-// jump the Clock sysvar's unix_timestamp forward instantly, with no real
-// wait. This is the confirmed clock-warp mechanism for this test file.
+// happy_path.ts/bounty.ts. Originally this was load-bearing because the
+// defense window was a hardcoded 48h constant; as of the Tier 2.5 fix it's a
+// per-job param (defense_window_seconds), so production callers pass
+// whatever they like and this suite passes a short one (TEST_DEFENSE_WINDOW
+// below) to keep the warp trivial. We still use bankrun's
+// `ProgramTestContext.setClock()` rather than a live validator both for
+// speed and to avoid relying on a real clock for sub-second-precision
+// assertions.
 import * as crypto from "crypto";
 import { BN, Program } from "@anchor-lang/core";
 import {
@@ -34,7 +36,9 @@ const PROGRAM_ID = new PublicKey(
   "FgkicN5V1fYLFJaY6nH9er3vvCr1nJCQVA9Wy7e3kLhy"
 );
 
-const DEFENSE_WINDOW = 172_800; // must match programs/autark/src/constants.rs
+// A short, per-test defense window — proves defense_deadline derives from
+// this param (which varies across tests below), not from any program const.
+const TEST_DEFENSE_WINDOW = 5;
 
 // ─── PDA helpers ─────────────────────────────────────────────────────────────
 
@@ -346,7 +350,8 @@ describe("autark dispute: challenge + resolve (both-burn MAD)", () => {
 
   async function proposeAcceptRelease(
     provider: Keypair,
-    challengeWindowSeconds: number
+    challengeWindowSeconds: number,
+    defenseWindowSeconds: number
   ): Promise<{
     consumer: Keypair;
     consumerTokenAccount: PublicKey;
@@ -381,7 +386,8 @@ describe("autark dispute: challenge + resolve (both-burn MAD)", () => {
             new BN(amount),
             new BN(now + 3600),
             new BN(now + 7200),
-            challengeWindowSeconds
+            challengeWindowSeconds,
+            defenseWindowSeconds
           )
           .accounts({
             jobOffer,
@@ -435,7 +441,8 @@ describe("autark dispute: challenge + resolve (both-burn MAD)", () => {
     consumer: Keypair,
     consumerTokenAccount: PublicKey,
     jobId: number[],
-    jobOffer: PublicKey
+    jobOffer: PublicKey,
+    defenseWindowSeconds: number
   ): Promise<{ challenge: PublicKey; stakeVault: PublicKey }> {
     const challenge = challengePda(jobOffer);
     const stakeVault = getAssociatedTokenAddressSync(mint, challenge, true);
@@ -465,23 +472,31 @@ describe("autark dispute: challenge + resolve (both-burn MAD)", () => {
     const opened = events.find((e) => e.name === "challengeOpened");
     expect(opened, "expected ChallengeOpened event").to.not.be.undefined;
 
+    // Proves defense_deadline derives from the per-job param passed to
+    // propose_job, not from a hardcoded program constant.
+    const challengeAccount = await fetchAccount<any>(context, program, "challenge", challenge);
+    expect(challengeAccount.defenseDeadline.toNumber()).to.equal(
+      challengeAccount.openedAt.toNumber() + defenseWindowSeconds
+    );
+
     return { challenge, stakeVault };
   }
 
   it("UNDEFENDED: provider never defends -> consumer refunded, provider slashed", async () => {
     const { owner: provider, tokenAccount: providerTokenAccount } = await registerAgent();
     const { consumer, consumerTokenAccount, jobId, jobOffer, escrowVault, amount } =
-      await proposeAcceptRelease(provider, 0);
+      await proposeAcceptRelease(provider, 0, TEST_DEFENSE_WINDOW);
 
     const { challenge, stakeVault } = await openChallenge(
       consumer,
       consumerTokenAccount,
       jobId,
-      jobOffer
+      jobOffer,
+      TEST_DEFENSE_WINDOW
     );
 
-    // fast-forward past the 48h defense window — no real wait.
-    await warpSeconds(context, DEFENSE_WINDOW + 10);
+    // fast-forward past the (short, per-job) defense window — no real wait.
+    await warpSeconds(context, TEST_DEFENSE_WINDOW + 10);
 
     const consumerBalanceBefore = await getTokenBalance(context, consumerTokenAccount);
     const poolBefore = await fetchAccount<any>(
@@ -569,13 +584,14 @@ describe("autark dispute: challenge + resolve (both-burn MAD)", () => {
   it("DEFENDED (MAD): both stakes burned, escrow split 50/50", async () => {
     const { owner: provider, tokenAccount: providerTokenAccount } = await registerAgent();
     const { consumer, consumerTokenAccount, jobId, jobOffer, escrowVault, amount } =
-      await proposeAcceptRelease(provider, 0);
+      await proposeAcceptRelease(provider, 0, TEST_DEFENSE_WINDOW);
 
     const { challenge, stakeVault } = await openChallenge(
       consumer,
       consumerTokenAccount,
       jobId,
-      jobOffer
+      jobOffer,
+      TEST_DEFENSE_WINDOW
     );
 
     const defendIx = await program.methods
@@ -599,7 +615,7 @@ describe("autark dispute: challenge + resolve (both-burn MAD)", () => {
     const defendEvents = await decodeEvents(context, program, defendTx);
     expect(defendEvents.find((e) => e.name === "challengeDefended")).to.not.be.undefined;
 
-    await warpSeconds(context, DEFENSE_WINDOW + 10);
+    await warpSeconds(context, TEST_DEFENSE_WINDOW + 10);
 
     const consumerBalanceBefore = await getTokenBalance(context, consumerTokenAccount);
     const providerBalanceBefore = await getTokenBalance(context, providerTokenAccount);
@@ -685,7 +701,8 @@ describe("autark dispute: challenge + resolve (both-burn MAD)", () => {
     const { owner: provider } = await registerAgent();
     const { consumer, consumerTokenAccount, jobId, jobOffer } = await proposeAcceptRelease(
       provider,
-      1
+      1,
+      TEST_DEFENSE_WINDOW
     );
 
     await warpSeconds(context, 5);
@@ -714,13 +731,15 @@ describe("autark dispute: challenge + resolve (both-burn MAD)", () => {
     const { owner: provider } = await registerAgent();
     const { consumer, consumerTokenAccount, jobId, jobOffer } = await proposeAcceptRelease(
       provider,
-      60
+      60,
+      TEST_DEFENSE_WINDOW
     );
     const { challenge, stakeVault } = await openChallenge(
       consumer,
       consumerTokenAccount,
       jobId,
-      jobOffer
+      jobOffer,
+      TEST_DEFENSE_WINDOW
     );
 
     const impostor = Keypair.generate();
@@ -753,16 +772,18 @@ describe("autark dispute: challenge + resolve (both-burn MAD)", () => {
     const { owner: provider, tokenAccount: providerTokenAccount } = await registerAgent();
     const { consumer, consumerTokenAccount, jobId, jobOffer } = await proposeAcceptRelease(
       provider,
-      60
+      60,
+      TEST_DEFENSE_WINDOW
     );
     const { challenge, stakeVault } = await openChallenge(
       consumer,
       consumerTokenAccount,
       jobId,
-      jobOffer
+      jobOffer,
+      TEST_DEFENSE_WINDOW
     );
 
-    await warpSeconds(context, DEFENSE_WINDOW + 10);
+    await warpSeconds(context, TEST_DEFENSE_WINDOW + 10);
 
     const ix = await program.methods
       .defendChallenge(jobId)
@@ -783,12 +804,13 @@ describe("autark dispute: challenge + resolve (both-burn MAD)", () => {
   it("NEGATIVE: resolve_challenge before defense_deadline fails", async () => {
     const { owner: provider, tokenAccount: providerTokenAccount } = await registerAgent();
     const { consumer, consumerTokenAccount, jobId, jobOffer, escrowVault } =
-      await proposeAcceptRelease(provider, 0);
+      await proposeAcceptRelease(provider, 0, TEST_DEFENSE_WINDOW);
     const { challenge, stakeVault } = await openChallenge(
       consumer,
       consumerTokenAccount,
       jobId,
-      jobOffer
+      jobOffer,
+      TEST_DEFENSE_WINDOW
     );
 
     const slashingVault = getAssociatedTokenAddressSync(mint, slashingPoolPda(), true);
@@ -844,7 +866,7 @@ describe("autark dispute: challenge + resolve (both-burn MAD)", () => {
       context,
       [
         await program.methods
-          .proposeJob(jobId, provider.publicKey, new BN(amount), new BN(now + 3600), new BN(now + 7200), 0)
+          .proposeJob(jobId, provider.publicKey, new BN(amount), new BN(now + 3600), new BN(now + 7200), 0, TEST_DEFENSE_WINDOW)
           .accounts({
             jobOffer,
             mintWhitelist: mintWhitelistPda(),

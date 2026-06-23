@@ -67,6 +67,7 @@ pub mod autark {
         acceptance_deadline: i64,
         delivery_deadline: i64,
         challenge_window_seconds: u32,
+        defense_window_seconds: u32,
     ) -> Result<()> {
         instructions::propose_job_handler(
             ctx,
@@ -76,6 +77,7 @@ pub mod autark {
             acceptance_deadline,
             delivery_deadline,
             challenge_window_seconds,
+            defense_window_seconds,
         )
     }
 
@@ -116,6 +118,7 @@ pub mod autark {
         bidding_deadline: i64,
         delivery_deadline: i64,
         challenge_window_seconds: u32,
+        defense_window_seconds: u32,
     ) -> Result<()> {
         instructions::post_bounty_handler(
             ctx,
@@ -126,6 +129,7 @@ pub mod autark {
             bidding_deadline,
             delivery_deadline,
             challenge_window_seconds,
+            defense_window_seconds,
         )
     }
 

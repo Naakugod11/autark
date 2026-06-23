@@ -3,8 +3,7 @@ use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 
 use crate::constants::{
-    DEFENSE_WINDOW, SEED_AGENT, SEED_CHALLENGE, SEED_JOB, SEED_SLASHING_POOL,
-    SLASH_PCT_LOST_CHALLENGE,
+    SEED_AGENT, SEED_CHALLENGE, SEED_JOB, SEED_SLASHING_POOL, SLASH_PCT_LOST_CHALLENGE,
 };
 use crate::errors::AutarkError;
 use crate::instructions::slashing::slash_provider_stake;
@@ -81,7 +80,11 @@ pub fn challenge_settlement_handler(
     )?;
 
     let job_key = ctx.accounts.job_offer.key();
-    let defense_deadline = now.saturating_add(DEFENSE_WINDOW);
+    // Per-job param, like challenge_window_seconds — DEFENSE_WINDOW (the
+    // hardcoded 48h const) is only the recommended default a caller/SDK
+    // passes for production; it is no longer read here.
+    let defense_deadline =
+        now.saturating_add(ctx.accounts.job_offer.defense_window_seconds as i64);
 
     let challenge = &mut ctx.accounts.challenge;
     challenge.job = job_key;

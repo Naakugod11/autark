@@ -239,7 +239,8 @@ describe("autark happy path: config + identity + stake + targeted hire", () => {
         new BN(amount),
         new BN(acceptanceDeadline),
         new BN(deliveryDeadline),
-        challengeWindowSeconds
+        challengeWindowSeconds,
+        0
       )
       .accounts({
         jobOffer,
@@ -410,6 +411,7 @@ describe("autark happy path: config + identity + stake + targeted hire", () => {
         new BN(amount),
         new BN(now + 3600),
         new BN(now + 7200),
+        0,
         0
       )
       .accounts({
@@ -459,7 +461,8 @@ describe("autark happy path: config + identity + stake + targeted hire", () => {
         new BN(amount),
         new BN(now + 3600),
         new BN(now + 7200),
-        challengeWindowSeconds
+        challengeWindowSeconds,
+        0
       )
       .accounts({
         jobOffer,
@@ -551,6 +554,7 @@ describe("autark happy path: config + identity + stake + targeted hire", () => {
           new BN(1_000_000),
           new BN(now + 3600),
           new BN(now + 7200),
+          0,
           0
         )
         .accounts({
@@ -587,6 +591,7 @@ describe("autark happy path: config + identity + stake + targeted hire", () => {
         new BN(amount),
         new BN(now + 3600),
         new BN(now + 7200),
+        0,
         0
       )
       .accounts({

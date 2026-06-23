@@ -242,7 +242,8 @@ describe("autark bounty: broadcast / bounty happy path", () => {
         0, // min_reputation — a freshly registered agent (score_completed = 0) qualifies
         new BN(biddingDeadline),
         new BN(deliveryDeadline),
-        challengeWindowSeconds
+        challengeWindowSeconds,
+        0
       )
       .accounts({
         bounty,
@@ -366,6 +367,7 @@ describe("autark bounty: broadcast / bounty happy path", () => {
         0,
         new BN(now + 3600),
         new BN(now + 7200),
+        0,
         0
       )
       .accounts({
@@ -418,6 +420,7 @@ describe("autark bounty: broadcast / bounty happy path", () => {
         1, // min_reputation = 1; a fresh agent has score_completed = 0
         new BN(now + 3600),
         new BN(now + 7200),
+        0,
         0
       )
       .accounts({
@@ -477,6 +480,7 @@ describe("autark bounty: broadcast / bounty happy path", () => {
         0,
         new BN(now + 3600),
         new BN(now + 7200),
+        0,
         0
       )
       .accounts({
@@ -563,6 +567,7 @@ describe("autark bounty: broadcast / bounty happy path", () => {
         0,
         new BN(now + 3600),
         new BN(now + 7200),
+        0,
         0
       )
       .accounts({
@@ -674,6 +679,7 @@ describe("autark bounty: broadcast / bounty happy path", () => {
         0,
         new BN(now - 10), // bidding window already closed
         new BN(now + 7200),
+        0,
         0
       )
       .accounts({

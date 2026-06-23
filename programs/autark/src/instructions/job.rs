@@ -42,6 +42,7 @@ pub fn propose_job_handler(
     acceptance_deadline: i64,
     delivery_deadline: i64,
     challenge_window_seconds: u32,
+    defense_window_seconds: u32,
 ) -> Result<()> {
     require!(amount > 0, AutarkError::AmountZero);
     require!(
@@ -81,6 +82,7 @@ pub fn propose_job_handler(
     job_offer.acceptance_deadline = acceptance_deadline;
     job_offer.delivery_deadline = delivery_deadline;
     job_offer.challenge_window_seconds = challenge_window_seconds;
+    job_offer.defense_window_seconds = defense_window_seconds;
     job_offer.settlement_pending_at = None;
     job_offer.counter_count = 0;
     job_offer.created_at = Clock::get()?.unix_timestamp;

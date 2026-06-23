@@ -48,6 +48,7 @@ pub fn post_bounty_handler(
     bidding_deadline: i64,
     delivery_deadline: i64,
     challenge_window_seconds: u32,
+    defense_window_seconds: u32,
 ) -> Result<()> {
     require!(
         capability_required.len() <= MAX_CAPABILITY_REQUIRED_LEN,
@@ -90,6 +91,7 @@ pub fn post_bounty_handler(
     bounty.bidding_deadline = bidding_deadline;
     bounty.delivery_deadline = delivery_deadline;
     bounty.challenge_window_seconds = challenge_window_seconds;
+    bounty.defense_window_seconds = defense_window_seconds;
     bounty.budget_escrow = None;
     bounty.depth = 0;
     bounty.parent_job = None;
@@ -310,6 +312,7 @@ pub fn accept_bid_handler(ctx: Context<AcceptBid>, bounty_id: [u8; 32]) -> Resul
     job_offer.acceptance_deadline = ctx.accounts.bid.delivery_deadline;
     job_offer.delivery_deadline = ctx.accounts.bid.delivery_deadline;
     job_offer.challenge_window_seconds = ctx.accounts.bounty.challenge_window_seconds;
+    job_offer.defense_window_seconds = ctx.accounts.bounty.defense_window_seconds;
     job_offer.settlement_pending_at = None;
     job_offer.counter_count = 0;
     job_offer.created_at = Clock::get()?.unix_timestamp;

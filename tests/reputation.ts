@@ -1,7 +1,9 @@
 // Tier 3 reputation-lifecycle test. Runs against solana-bankrun for the same
-// reason as dispute.ts: the undefended-challenge leg needs to fast-forward
-// past DEFENSE_WINDOW (172_800s / 48h), which only bankrun's
-// `ProgramTestContext.setClock()` can do without a real wait.
+// reason as dispute.ts. The undefended-challenge leg needs to fast-forward
+// past the job's defense window — a per-job param (defense_window_seconds)
+// since the Tier 2.5 fix, not a hardcoded constant — and bankrun's
+// `ProgramTestContext.setClock()` does that without a real wait. We pass a
+// short TEST_DEFENSE_WINDOW below to keep the warp trivial.
 import * as crypto from "crypto";
 import { BN, Program } from "@anchor-lang/core";
 import {
@@ -29,7 +31,7 @@ const PROGRAM_ID = new PublicKey(
   "FgkicN5V1fYLFJaY6nH9er3vvCr1nJCQVA9Wy7e3kLhy"
 );
 
-const DEFENSE_WINDOW = 172_800; // must match programs/autark/src/constants.rs
+const TEST_DEFENSE_WINDOW = 5;
 
 // ─── PDA helpers ─────────────────────────────────────────────────────────────
 
@@ -334,7 +336,7 @@ describe("autark reputation: counters accumulate across the full arc", () => {
     const escrowVault = getAssociatedTokenAddressSync(mint, jobOffer, true);
 
     const proposeIx = await program.methods
-      .proposeJob(jobId, provider.publicKey, new BN(amount), new BN(now + 3600), new BN(now + 7200), 0)
+      .proposeJob(jobId, provider.publicKey, new BN(amount), new BN(now + 3600), new BN(now + 7200), 0, 0)
       .accounts({
         jobOffer,
         mintWhitelist: mintWhitelistPda(),
@@ -411,7 +413,7 @@ describe("autark reputation: counters accumulate across the full arc", () => {
       context,
       [
         await program.methods
-          .proposeJob(jobId, provider.publicKey, new BN(amount), new BN(now + 3600), new BN(now + 7200), 0)
+          .proposeJob(jobId, provider.publicKey, new BN(amount), new BN(now + 3600), new BN(now + 7200), 0, TEST_DEFENSE_WINDOW)
           .accounts({
             jobOffer,
             mintWhitelist: mintWhitelistPda(),
@@ -478,7 +480,14 @@ describe("autark reputation: counters accumulate across the full arc", () => {
       consumer
     );
 
-    await warpSeconds(context, DEFENSE_WINDOW + 10);
+    // Proves defense_deadline derives from the per-job param passed to
+    // propose_job, not from a hardcoded program constant.
+    const challengeAccount = await fetchAccount<any>(context, program, "challenge", challenge);
+    expect(challengeAccount.defenseDeadline.toNumber()).to.equal(
+      challengeAccount.openedAt.toNumber() + TEST_DEFENSE_WINDOW
+    );
+
+    await warpSeconds(context, TEST_DEFENSE_WINDOW + 10);
 
     const slashingVault = getAssociatedTokenAddressSync(mint, slashingPoolPda(), true);
     const providerStakeVault = getAssociatedTokenAddressSync(mint, agentPda(provider.publicKey), true);
@@ -587,6 +596,7 @@ describe("autark reputation: counters accumulate across the full arc", () => {
         0,
         new BN(now + 3600),
         new BN(now + 7200),
+        0,
         0
       )
       .accounts({
