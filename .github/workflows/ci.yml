@@ -100,7 +100,11 @@ jobs:
           anchor --version
 
       - name: anchor build
-        run: anchor build
+        # target/deploy/autark-keypair.json is gitignored (it's the program's
+        # private key), so CI generates a random throwaway one that can't
+        # match declare_id! in source. CI only builds, never deploys, so the
+        # real program ID doesn't matter here — skip the consistency check.
+        run: anchor build --ignore-keys
 
       # TODO(Tier 1): once v1 program tests exist, uncomment this step.
       # v0's tests are being removed in Tier 0 and there is currently nothing
