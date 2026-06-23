@@ -53,24 +53,45 @@ jobs:
           sh -c "$(curl -sSfL https://release.anza.xyz/v${{ env.SOLANA_VERSION }}/install)"
           echo "$HOME/.local/share/solana/install/active_release/bin" >> "$GITHUB_PATH"
 
-      - name: Cache AVM + Anchor binaries
-        id: avm-cache
+      # Anchor is installed as a PREBUILT binary, not compiled via `cargo
+      # install avm` / `avm install`. Reason: current Anchor source pulls in
+      # cargo-platform@0.3.3, which requires rustc >=1.91 to compile — but
+      # this workflow pins Rust to 1.89.0 to match the program's local build
+      # toolchain, and avm cannot build under 1.89. Compiling avm under a
+      # second, newer Rust toolchain just to produce a 1.0.2 binary was the
+      # documented fallback for this problem, but turned out to be
+      # unnecessary: coral-xyz/anchor publishes an official prebuilt
+      # x86_64-unknown-linux-gnu binary for v1.0.2 (the repo now redirects to
+      # otter-sec/anchor, but release asset URLs follow the redirect fine).
+      # This also means zero Rust compilation of Anchor itself happens in CI
+      # — only our program is ever built with the pinned 1.89.0 toolchain.
+      - name: Cache Anchor CLI binary
+        id: anchor-bin-cache
         uses: actions/cache@v4
         with:
-          path: |
-            ~/.avm
-            ~/.cargo/bin/avm
-            ~/.cargo/bin/anchor
-          key: avm-anchor-${{ runner.os }}-${{ env.ANCHOR_VERSION }}
+          path: ~/.local/bin/anchor
+          key: anchor-bin-${{ runner.os }}-${{ env.ANCHOR_VERSION }}
 
-      - name: Install AVM
-        if: steps.avm-cache.outputs.cache-hit != 'true'
-        run: cargo install --git https://github.com/coral-xyz/anchor avm --locked --force
-
-      - name: Install pinned Anchor via AVM
+      - name: Install pinned Anchor (prebuilt binary, no compilation)
+        if: steps.anchor-bin-cache.outputs.cache-hit != 'true'
         run: |
-          avm install ${{ env.ANCHOR_VERSION }}
-          avm use ${{ env.ANCHOR_VERSION }}
+          mkdir -p "$HOME/.local/bin"
+          curl -sSfL -o "$HOME/.local/bin/anchor" \
+            "https://github.com/coral-xyz/anchor/releases/download/v${{ env.ANCHOR_VERSION }}/anchor-${{ env.ANCHOR_VERSION }}-x86_64-unknown-linux-gnu"
+          chmod +x "$HOME/.local/bin/anchor"
+
+      - name: Add Anchor to PATH and verify version
+        run: |
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          version_output="$("$HOME/.local/bin/anchor" --version)"
+          echo "$version_output"
+          case "$version_output" in
+            "anchor-cli ${{ env.ANCHOR_VERSION }}") ;;
+            *)
+              echo "::error::Expected anchor-cli ${{ env.ANCHOR_VERSION }}, got: $version_output"
+              exit 1
+              ;;
+          esac
 
       - name: Versions
         run: |
