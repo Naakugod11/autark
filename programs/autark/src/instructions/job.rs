@@ -7,6 +7,27 @@ use crate::constants::{SEED_AGENT, SEED_JOB, SEED_MINT_WHITELIST};
 use crate::errors::AutarkError;
 use crate::state::{Agent, JobOffer, JobStatus, MintWhitelist};
 
+// ─── Events ──────────────────────────────────────────────────────────────────
+
+#[event]
+pub struct JobProposed {
+    pub job: Pubkey,
+    pub consumer: Pubkey,
+    pub provider: Pubkey,
+    pub amount: u64,
+    pub mint: Pubkey,
+    pub delivery_deadline: i64,
+}
+
+#[event]
+pub struct JobAccepted {
+    pub job: Pubkey,
+    pub provider: Pubkey,
+    pub amount: u64,
+    pub stake_locked: u64,
+    pub provider_open_jobs: u16,
+}
+
 // ─── propose_job ─────────────────────────────────────────────────────────────
 //
 // Consumer is any wallet — not required to be a registered Agent. Recursion
@@ -65,6 +86,15 @@ pub fn propose_job_handler(
     job_offer.created_at = Clock::get()?.unix_timestamp;
     job_offer.bump = ctx.bumps.job_offer;
     job_offer.provider_stake_locked = 0;
+
+    emit!(JobProposed {
+        job: job_offer.key(),
+        consumer: job_offer.consumer,
+        provider,
+        amount,
+        mint: job_offer.mint,
+        delivery_deadline,
+    });
 
     Ok(())
 }
@@ -137,6 +167,14 @@ pub fn accept_job_handler(ctx: Context<AcceptJob>, _job_id: [u8; 32]) -> Result<
     job_offer.provider_stake_locked = min(agent.stake_amount, job_offer.amount);
     job_offer.status = JobStatus::Accepted;
     agent.open_jobs = agent.open_jobs.saturating_add(1);
+
+    emit!(JobAccepted {
+        job: job_offer.key(),
+        provider: ctx.accounts.provider.key(),
+        amount: job_offer.amount,
+        stake_locked: job_offer.provider_stake_locked,
+        provider_open_jobs: agent.open_jobs,
+    });
 
     Ok(())
 }

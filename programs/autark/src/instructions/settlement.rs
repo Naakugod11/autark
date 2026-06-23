@@ -5,6 +5,27 @@ use crate::constants::{SEED_AGENT, SEED_JOB};
 use crate::errors::AutarkError;
 use crate::state::{Agent, JobOffer, JobStatus};
 
+// ─── Events ──────────────────────────────────────────────────────────────────
+
+#[event]
+pub struct SettlementPendingEvent {
+    pub job: Pubkey,
+    pub provider: Pubkey,
+    /// settlement_pending_at + challenge_window_seconds.
+    pub settle_eligible_at: i64,
+}
+
+#[event]
+pub struct JobSettled {
+    pub job: Pubkey,
+    pub provider: Pubkey,
+    pub amount: u64,
+    /// POST-update provider Agent counters.
+    pub score_completed: u64,
+    pub score_volume: u64,
+    pub score_failed: u64,
+}
+
 // ─── release_escrow ──────────────────────────────────────────────────────────
 
 pub fn release_escrow_handler(ctx: Context<ReleaseEscrow>, _job_id: [u8; 32]) -> Result<()> {
@@ -14,8 +35,16 @@ pub fn release_escrow_handler(ctx: Context<ReleaseEscrow>, _job_id: [u8; 32]) ->
         AutarkError::InvalidStatus
     );
 
+    let now = Clock::get()?.unix_timestamp;
     job_offer.status = JobStatus::SettlementPending;
-    job_offer.settlement_pending_at = Some(Clock::get()?.unix_timestamp);
+    job_offer.settlement_pending_at = Some(now);
+
+    emit!(SettlementPendingEvent {
+        job: job_offer.key(),
+        provider: job_offer.provider,
+        settle_eligible_at: now.saturating_add(job_offer.challenge_window_seconds as i64),
+    });
+
     Ok(())
 }
 
@@ -73,6 +102,8 @@ pub fn claim_settlement_handler(ctx: Context<ClaimSettlement>, job_id: [u8; 32])
     )?;
 
     let job_offer = &mut ctx.accounts.job_offer;
+    let job_key = job_offer.key();
+    let provider = job_offer.provider;
     job_offer.status = JobStatus::Settled;
     job_offer.provider_stake_locked = 0;
 
@@ -80,6 +111,15 @@ pub fn claim_settlement_handler(ctx: Context<ClaimSettlement>, job_id: [u8; 32])
     agent.score_completed = agent.score_completed.saturating_add(1);
     agent.score_volume = agent.score_volume.saturating_add(amount);
     agent.open_jobs = agent.open_jobs.saturating_sub(1);
+
+    emit!(JobSettled {
+        job: job_key,
+        provider,
+        amount,
+        score_completed: agent.score_completed,
+        score_volume: agent.score_volume,
+        score_failed: agent.score_failed,
+    });
 
     Ok(())
 }

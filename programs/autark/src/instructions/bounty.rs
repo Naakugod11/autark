@@ -9,6 +9,34 @@ use crate::constants::{
 use crate::errors::AutarkError;
 use crate::state::{Agent, Bid, Bounty, BountyStatus, JobOffer, JobStatus, MintWhitelist};
 
+// ─── Events ──────────────────────────────────────────────────────────────────
+
+#[event]
+pub struct BountyPosted {
+    pub bounty: Pubkey,
+    pub poster: Pubkey,
+    pub capability_required: String,
+    pub max_amount: u64,
+    pub min_reputation: u32,
+}
+
+#[event]
+pub struct BidSubmitted {
+    pub bounty: Pubkey,
+    pub bidder: Pubkey,
+    pub price: u64,
+}
+
+#[event]
+pub struct BountyAwarded {
+    pub bounty: Pubkey,
+    pub job: Pubkey,
+    pub poster: Pubkey,
+    pub provider: Pubkey,
+    pub price: u64,
+    pub refund_to_poster: u64,
+}
+
 // ─── post_bounty ─────────────────────────────────────────────────────────────
 
 pub fn post_bounty_handler(
@@ -68,6 +96,14 @@ pub fn post_bounty_handler(
     bounty.bid_count = 0;
     bounty.created_at = Clock::get()?.unix_timestamp;
     bounty.bump = ctx.bumps.bounty;
+
+    emit!(BountyPosted {
+        bounty: bounty.key(),
+        poster: bounty.poster,
+        capability_required: bounty.capability_required.clone(),
+        max_amount,
+        min_reputation,
+    });
 
     Ok(())
 }
@@ -154,6 +190,12 @@ pub fn submit_bid_handler(ctx: Context<SubmitBid>, price: u64, delivery_deadline
     let bounty = &mut ctx.accounts.bounty;
     bounty.bid_count = bounty.bid_count.saturating_add(1);
     bounty.status = BountyStatus::Bidding;
+
+    emit!(BidSubmitted {
+        bounty: bounty.key(),
+        bidder: ctx.accounts.bidder.key(),
+        price,
+    });
 
     Ok(())
 }
@@ -281,6 +323,15 @@ pub fn accept_bid_handler(ctx: Context<AcceptBid>, bounty_id: [u8; 32]) -> Resul
     let bounty = &mut ctx.accounts.bounty;
     bounty.winning_bid = Some(bid_key);
     bounty.status = BountyStatus::Awarded;
+
+    emit!(BountyAwarded {
+        bounty: bounty.key(),
+        job: job_offer.key(),
+        poster: poster_key,
+        provider: job_offer.provider,
+        price,
+        refund_to_poster: refund,
+    });
 
     Ok(())
 }

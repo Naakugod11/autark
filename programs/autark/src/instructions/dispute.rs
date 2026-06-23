@@ -37,6 +37,11 @@ pub struct ChallengeResolved {
     pub consumer_refund: u64,
     pub provider_payout: u64,
     pub slashed: u64,
+    /// POST-update provider Agent counters — the dashboard reads the slash
+    /// straight off this event, no re-fetch.
+    pub provider_score_completed: u64,
+    pub provider_score_volume: u64,
+    pub provider_score_failed: u64,
 }
 
 // ─── challenge_settlement ────────────────────────────────────────────────────
@@ -421,6 +426,9 @@ pub fn resolve_challenge_handler(ctx: Context<ResolveChallenge>, job_id: [u8; 32
         consumer_refund,
         provider_payout,
         slashed,
+        provider_score_completed: ctx.accounts.provider_agent.score_completed,
+        provider_score_volume: ctx.accounts.provider_agent.score_volume,
+        provider_score_failed: ctx.accounts.provider_agent.score_failed,
     });
 
     Ok(())
