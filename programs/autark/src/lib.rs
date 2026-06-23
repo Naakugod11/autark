@@ -135,4 +135,23 @@ pub mod autark {
     pub fn close_bid(ctx: Context<CloseBid>) -> Result<()> {
         instructions::close_bid_handler(ctx)
     }
+
+    // ── Dispute + slash (both-burn MAD) ──────────────────────────────────────
+
+    pub fn challenge_settlement(
+        ctx: Context<ChallengeSettlement>,
+        job_id: [u8; 32],
+    ) -> Result<()> {
+        instructions::challenge_settlement_handler(ctx, job_id)
+    }
+
+    pub fn defend_challenge(ctx: Context<DefendChallenge>, job_id: [u8; 32]) -> Result<()> {
+        instructions::defend_challenge_handler(ctx, job_id)
+    }
+
+    /// Anyone may crank this once defense_deadline has passed. See
+    /// dispute.rs for the two resolution branches.
+    pub fn resolve_challenge(ctx: Context<ResolveChallenge>, job_id: [u8; 32]) -> Result<()> {
+        instructions::resolve_challenge_handler(ctx, job_id)
+    }
 }

@@ -64,4 +64,16 @@ pub enum AutarkError {
 
     #[msg("Bid does not belong to this bounty")]
     BidNotForBounty,
+
+    #[msg("Signer is not the consumer for this job")]
+    NotConsumer,
+
+    #[msg("Challenge window has already closed — crank claim_settlement instead")]
+    ChallengeWindowClosed,
+
+    #[msg("Defense deadline has already passed")]
+    DefenseDeadlinePassed,
+
+    #[msg("Defense window has not yet elapsed")]
+    DefenseWindowNotElapsed,
 }

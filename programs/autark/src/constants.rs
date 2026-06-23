@@ -4,6 +4,7 @@ pub const SEED_MINT_WHITELIST: &[u8] = b"mint_whitelist";
 pub const SEED_SLASHING_POOL: &[u8] = b"slashing_pool";
 pub const SEED_BOUNTY: &[u8] = b"bounty";
 pub const SEED_BID: &[u8] = b"bid";
+pub const SEED_CHALLENGE: &[u8] = b"challenge";
 
 pub const MIN_STAKE_AMOUNT: u64 = 10_000_000; // 10 USDC, 6 decimals
 pub const MAX_CAPABILITIES: usize = 8;
