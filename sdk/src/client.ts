@@ -3,6 +3,7 @@ import { Connection, Keypair } from "@solana/web3.js";
 import * as fs from "fs";
 import * as path from "path";
 import type { Autark } from "../../target/types/autark";
+import { makeAutarkIx, AutarkIx } from "./instructions";
 
 const idl = JSON.parse(
   fs.readFileSync(
@@ -23,10 +24,12 @@ export const accs = (obj: Record<string, unknown>) => obj as any;
 export class AutarkClient {
   readonly program: Program<Autark>;
   readonly connection: Connection;
+  readonly ix: AutarkIx;
 
   private constructor(program: Program<Autark>, connection: Connection) {
     this.program = program;
     this.connection = connection;
+    this.ix = makeAutarkIx(program);
   }
 
   // Node/script path: keypair-backed signer.
