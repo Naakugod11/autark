@@ -86,6 +86,10 @@ pub struct JobOffer {
     // NOTE: all dispute-specific state (stakes, defense window, dispute enum)
     // lives on the separate Challenge account below, NOT here. Do not add
     // challenge_stake / defense_stake fields to JobOffer.
+    /// The 32-byte seed used to derive this PDA. Stored so providers can
+    /// discover targeted-hire jobs via a provider memcmp scan and reconstruct
+    /// the PDA without an out-of-band hint.
+    pub job_id: [u8; 32],
 }
 
 // ─── Bounty ──────────────────────────────────────────────────────────────────

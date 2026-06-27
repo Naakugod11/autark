@@ -73,6 +73,7 @@ export type JobOfferData = {
   providerStakeLocked: number;
   createdAt: number;
   bump: number;
+  jobId: number[];
 };
 
 export type BountyData = {
@@ -216,6 +217,7 @@ export async function fetchJobOffer(
     providerStakeLocked: bn(r.providerStakeLocked),
     createdAt: bn(r.createdAt),
     bump: r.bump,
+    jobId: Array.from(r.jobId as number[]),
   };
 }
 
@@ -245,6 +247,7 @@ export async function fetchAllJobOffers(
       providerStakeLocked: bn(r.providerStakeLocked),
       createdAt: bn(r.createdAt),
       bump: r.bump,
+      jobId: Array.from(r.jobId as number[]),
     };
   });
 }

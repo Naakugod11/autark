@@ -36,7 +36,7 @@ pub struct JobAccepted {
 
 pub fn propose_job_handler(
     ctx: Context<ProposeJob>,
-    _job_id: [u8; 32],
+    job_id: [u8; 32],
     provider: Pubkey,
     amount: u64,
     acceptance_deadline: i64,
@@ -88,6 +88,7 @@ pub fn propose_job_handler(
     job_offer.created_at = Clock::get()?.unix_timestamp;
     job_offer.bump = ctx.bumps.job_offer;
     job_offer.provider_stake_locked = 0;
+    job_offer.job_id = job_id;
 
     emit!(JobProposed {
         job: job_offer.key(),

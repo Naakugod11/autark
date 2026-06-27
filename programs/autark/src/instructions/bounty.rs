@@ -318,6 +318,9 @@ pub fn accept_bid_handler(ctx: Context<AcceptBid>, bounty_id: [u8; 32]) -> Resul
     job_offer.created_at = Clock::get()?.unix_timestamp;
     job_offer.bump = ctx.bumps.job_offer;
     job_offer.provider_stake_locked = min(ctx.accounts.provider_agent.stake_amount, price);
+    // job_id for a bounty-awarded job is the bounty's own pubkey bytes —
+    // deterministic and derivable by anyone scanning by provider.
+    job_offer.job_id = ctx.accounts.bounty.key().to_bytes();
 
     let provider_agent = &mut ctx.accounts.provider_agent;
     provider_agent.open_jobs = provider_agent.open_jobs.saturating_add(1);

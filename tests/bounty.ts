@@ -350,6 +350,10 @@ describe("autark bounty: broadcast / bounty happy path", () => {
 
     const jobOfferAccount = await program.account.jobOffer.fetch(jobOffer);
     expect(jobOfferAccount.status).to.deep.equal({ settled: {} });
+    // job_id for a bounty-awarded job is the bounty's own pubkey bytes.
+    expect(Array.from(jobOfferAccount.jobId as number[])).to.deep.equal(
+      Array.from(bounty.toBytes())
+    );
   });
 
   it("NEGATIVE: bid price > max_amount fails", async () => {

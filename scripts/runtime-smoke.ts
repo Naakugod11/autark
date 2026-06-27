@@ -3,14 +3,17 @@
  *
  * Proves:
  *   1. research-agent starts, registers if needed.
- *   2. Consumer proposes a targeted-hire job; runtime auto-accepts, calls onJob
- *      (Claude), releaseEscrow's; consumer's challenge window expires; agent
- *      self-claims → job Settled, score_completed incremented.
- *   3. Consumer proposes a second job; agent accepts + releases; consumer
- *      challengeSettlement's → agent detects challenge, onChallenged fires,
- *      defendChallenge lands → challenge.state == "defended".
+ *   2. Consumer proposes a targeted-hire job WITHOUT calling notifyJob — the
+ *      runtime discovers it autonomously via provider memcmp + job_id on-chain,
+ *      auto-accepts, calls onJob (Claude), releaseEscrow's; consumer's challenge
+ *      window expires; agent self-claims → job Settled, score_completed incremented.
+ *   3. Consumer proposes a second job (again, no notifyJob); agent accepts +
+ *      releases; consumer challengeSettlement's → agent detects challenge,
+ *      onChallenged fires, defendChallenge lands → challenge.state == "defended".
  *   4. Loop-resilience: one deliberately-bad poll iteration is injected and
  *      confirmed to not kill the loop.
+ *
+ * ZERO notifyJob calls — the agent learns about every job purely from the chain.
  *
  * Run:  npx tsx scripts/runtime-smoke.ts
  */
@@ -47,8 +50,8 @@ const DEPLOYER_PATH =
 const CONSUMER_PATH = path.join(REPO_ROOT, ".devnet/agent-wallet-2.json");
 const CONFIG_PATH = path.join(REPO_ROOT, "devnet.config.json");
 
-const WINDOW_SECONDS = 3; // short but with slack vs devnet clock drift
-const POLL_TIMEOUT_MS = 40_000; // max wait for runtime to react (5s poll + tx latency)
+const WINDOW_SECONDS = 30; // defense/challenge window; must exceed poll interval (5s) + tx latency
+const POLL_TIMEOUT_MS = 60_000; // max wait for runtime to react (5s poll + tx latency + devnet jitter)
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -206,8 +209,9 @@ async function main() {
   const happyJobPda = jobOfferPda(consumer.publicKey, happyJobId);
   const now = Math.floor(Date.now() / 1000);
 
-  // Deliver jobId hint to runtime BEFORE proposing so it's ready on first poll.
-  researchAgent.notifyJob(happyJobId, consumer.publicKey);
+  // No notifyJob — the runtime will discover this job purely from the chain
+  // by scanning for JobOffer accounts with provider == researchAgent.me and
+  // reading job_id off each account.
 
   step("proposeJob → consumer");
   {
@@ -289,7 +293,7 @@ async function main() {
   const disputeJobPda = jobOfferPda(consumer.publicKey, disputeJobId);
   const now2 = Math.floor(Date.now() / 1000);
 
-  researchAgent.notifyJob(disputeJobId, consumer.publicKey);
+  // Again: no notifyJob. Agent discovers the second job on its own.
 
   step("proposeJob #2 → consumer");
   {
@@ -384,6 +388,8 @@ async function main() {
     const s = researchAgent.status();
     if (!s.running) throw new Error("FAIL: runtime is no longer running after bad iteration");
     console.log(`   ✓ Runtime still running after synthetic error | status: ${JSON.stringify(s)}`);
+    // Confirm pendingHints field is gone (notifyJob removed).
+    if ("pendingHints" in s) throw new Error("FAIL: notifyJob artifact 'pendingHints' still present in status()");
   }
 
   // ── Summary ───────────────────────────────────────────────────────────────

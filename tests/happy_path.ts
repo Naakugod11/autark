@@ -305,6 +305,7 @@ describe("autark happy path: config + identity + stake + targeted hire", () => {
 
     const jobOfferAccount = await program.account.jobOffer.fetch(jobOffer);
     expect(jobOfferAccount.status).to.deep.equal({ settled: {} });
+    expect(Array.from(jobOfferAccount.jobId as number[])).to.deep.equal(jobId);
   });
 
   it("NEGATIVE: register_agent with stake < MIN_STAKE_AMOUNT fails", async () => {

@@ -4,16 +4,10 @@
  * Reusable polling-based agent runtime. Implementors provide only `onJob`
  * (the intelligence function); all Solana mechanics live here.
  *
- * Architecture note — jobId hint requirement:
- *   The on-chain JobOffer PDA is derived from [consumer, job_id] but job_id is
- *   NOT stored in the account (it is a seed only). getProgramAccounts returns the
- *   PDA address but not the seed preimage, so the runtime can't call accept_job,
- *   release_escrow, or defend_challenge without knowing job_id.
- *
- *   Solution: callers deliver this hint via notifyJob(jobId, consumer) before
- *   or immediately after proposeJob. In production the consumer calls the agent's
- *   HTTP endpoint; in targeted-hire tests, notifyJob is called directly.
- *   v2 may store job_id in the JobOffer account to eliminate this requirement.
+ * Discovery: job_id is now stored on-chain in JobOffer.job_id (added in the
+ * v1.1 contract upgrade). A provider memcmp scan at offset 40 returns all
+ * targeted-hire and bounty-awarded jobs; consumer + job_id are read directly
+ * off each account, so no out-of-band hint is required.
  */
 
 import { BN } from "@anchor-lang/core";
@@ -25,7 +19,7 @@ import {
 } from "@solana/web3.js";
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { AutarkClient } from "./client";
-import { agentPda, jobOfferPda } from "./pdas";
+import { agentPda } from "./pdas";
 import {
   JobOfferData,
   ChallengeData,
@@ -72,16 +66,8 @@ export class AutarkAgent {
   private readonly handledSettlements = new Set<string>(); // 'settle:<jobKey>'
   private readonly handledDefenses = new Set<string>();    // 'defend:<challengeKey>'
 
-  // Targeted-hire out-of-band channel: consumer delivers jobId before proposeJob.
-  // Key = jobOfferPda.toBase58(), value = { jobId, consumer }.
-  private readonly jobIdHints = new Map<
-    string,
-    { jobId: number[]; consumer: PublicKey }
-  >();
-
   // In-memory result store. v1: result delivery is off-chain/trust-based;
-  // releaseEscrow is the "delivered" signal. On-chain result hashing (commitment
-  // to sha256(result) in job_offer) is a v2 concern.
+  // releaseEscrow is the "delivered" signal. On-chain result hashing is v2.
   readonly jobResults = new Map<string, string>(); // jobPubkey → result text
 
   constructor(config: AgentRuntimeConfig) {
@@ -130,26 +116,8 @@ export class AutarkAgent {
       running: this.running,
       pubkey: this.me.toBase58(),
       handledJobs: this.handledJobs.size,
-      pendingHints: this.jobIdHints.size,
       resultsStored: this.jobResults.size,
     };
-  }
-
-  /**
-   * Deliver a job-id hint for a targeted-hire job.
-   * Must be called before (or shortly after) the consumer calls proposeJob so
-   * the runtime can match the on-chain account to its seed preimage.
-   */
-  notifyJob(jobId: Uint8Array | number[], consumer: PublicKey): void {
-    const idArr = Array.from(jobId);
-    const pda = jobOfferPda(consumer, Uint8Array.from(idArr));
-    const key = pda.toBase58();
-    if (!this.jobIdHints.has(key)) {
-      this.jobIdHints.set(key, { jobId: idArr, consumer });
-      console.log(
-        `[AutarkAgent] Job hint registered: ${key.slice(0, 8)}… (consumer ${consumer.toBase58().slice(0, 8)}…)`
-      );
-    }
   }
 
   // ── Lifecycle internals ────────────────────────────────────────────────────
@@ -218,10 +186,11 @@ export class AutarkAgent {
 
     // Single RPC call: fetch all my jobs (filter by provider == me).
     // Status is filtered in JS — avoids byte-offset fragility of a second memcmp.
+    // Offset 40 = 8 discriminator + 32 consumer; provider is always at this
+    // offset because job_id was appended at the END of the JobOffer struct.
     const myJobs = await this.client.program.account.jobOffer.all([
       {
         memcmp: {
-          // JobOffer layout: 8 discriminator + 32 consumer = offset 40 for provider
           offset: 40,
           bytes: this.me.toBase58(),
         },
@@ -238,14 +207,13 @@ export class AutarkAgent {
       const jobKey = raw.publicKey.toBase58();
       if (this.handledJobs.has(jobKey)) continue;
 
-      const hint = this.jobIdHints.get(jobKey);
-      if (!hint) {
-        // On-chain job exists but no jobId hint — can't act yet; skip.
-        console.log(
-          `[AutarkAgent] Proposed job ${jobKey.slice(0, 8)}… has no jobId hint, skipping`
-        );
-        continue;
-      }
+      // Extract consumer and job_id directly from the on-chain account.
+      const consumer: PublicKey = r.consumer;
+      const jobId: number[] = Array.from(r.jobId as number[]);
+
+      // Pre-upgrade accounts (created before job_id was added) have job_id = zeros.
+      // Cannot re-derive their PDA, so skip them.
+      if (jobId.every(b => b === 0)) continue;
 
       // Mark handled before async work so concurrent poll iterations don't double-fire.
       this.handledJobs.add(jobKey);
@@ -260,8 +228,8 @@ export class AutarkAgent {
         await this._sendWithRetry("rejectJob", () =>
           this.client.ix
             .rejectJob({
-              consumer: hint.consumer,
-              jobId: hint.jobId,
+              consumer,
+              jobId,
               mint: job.mint,
             })
             .rpc()
@@ -287,8 +255,8 @@ export class AutarkAgent {
         await this._sendWithRetry("rejectJob-decline", () =>
           this.client.ix
             .rejectJob({
-              consumer: hint.consumer,
-              jobId: hint.jobId,
+              consumer,
+              jobId,
               mint: job.mint,
             })
             .rpc()
@@ -300,12 +268,12 @@ export class AutarkAgent {
         // there is no on-chain result commitment in this version.
         const acceptSig = await this._sendWithRetry("acceptJob", () =>
           this.client.ix
-            .acceptJob({ consumer: hint.consumer, jobId: hint.jobId })
+            .acceptJob({ consumer, jobId })
             .rpc()
         );
         const releaseSig = await this._sendWithRetry("releaseEscrow", () =>
           this.client.ix
-            .releaseEscrow({ consumer: hint.consumer, jobId: hint.jobId })
+            .releaseEscrow({ consumer, jobId })
             .rpc()
         );
         this.jobResults.set(jobKey, result.result);
@@ -338,11 +306,13 @@ export class AutarkAgent {
         settlementPendingAt + (r.challengeWindowSeconds as number);
       if (challengeDeadline > now) continue; // window still open
 
-      const hint = this.jobIdHints.get(jobKey);
-      if (!hint) {
-        console.log(
-          `[AutarkAgent] Settlement job ${jobKey.slice(0, 8)}… has no jobId hint, cannot claim`
-        );
+      const consumer: PublicKey = r.consumer;
+      const jobId: number[] = Array.from(r.jobId as number[]);
+
+      // Pre-upgrade accounts have job_id = [0,0,...] — can't re-derive PDA.
+      if (jobId.every(b => b === 0)) {
+        this.handledSettlements.add(settleKey);
+        console.log(`[AutarkAgent] Skipping pre-upgrade job ${jobKey.slice(0, 8)}… (job_id not stored)`);
         continue;
       }
 
@@ -351,8 +321,8 @@ export class AutarkAgent {
       const sig = await this._sendWithRetry("claimSettlement", () =>
         this.client.ix
           .claimSettlement({
-            consumer: hint.consumer,
-            jobId: hint.jobId,
+            consumer,
+            jobId,
             providerWallet: this.me,
             mint: job.mint,
           })
@@ -395,17 +365,19 @@ export class AutarkAgent {
       }
 
       const jobPubkey: PublicKey = r.job;
-      const jobKey = jobPubkey.toBase58();
-      const hint = this.jobIdHints.get(jobKey);
-      if (!hint) {
-        console.log(
-          `[AutarkAgent] Challenge ${challengeKey.slice(0, 8)}… — no jobId hint, cannot defend`
-        );
+      // Fetch the job to read consumer + job_id from the on-chain account.
+      const job = await fetchJobOffer(this.client.program, jobPubkey);
+      const consumer = job.consumer;
+      const jobId = job.jobId;
+
+      // Pre-upgrade jobs have job_id = zeros — cannot defend them on-chain.
+      if (jobId.every(b => b === 0)) {
+        this.handledDefenses.add(defendKey);
+        console.log(`[AutarkAgent] Skipping pre-upgrade challenge ${challengeKey.slice(0, 8)}… (job_id not stored)`);
         continue;
       }
 
       const challenge = this._decodeChallenge(raw.publicKey, r);
-      const job = await fetchJobOffer(this.client.program, jobPubkey);
 
       let decision: "defend" | "concede";
       try {
@@ -421,8 +393,8 @@ export class AutarkAgent {
         const sig = await this._sendWithRetry("defendChallenge", () =>
           this.client.ix
             .defendChallenge({
-              consumer: hint.consumer,
-              jobId: hint.jobId,
+              consumer,
+              jobId,
               mint: job.mint,
             })
             .rpc()
@@ -492,6 +464,7 @@ export class AutarkAgent {
       providerStakeLocked: (r.providerStakeLocked as BN).toNumber(),
       createdAt: (r.createdAt as BN).toNumber(),
       bump: r.bump,
+      jobId: Array.from(r.jobId as number[]),
     };
   }
 
