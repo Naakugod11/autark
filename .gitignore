@@ -57,6 +57,9 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# === Agent keypairs (stranger deployers) ===
+.agent/
+
 # === Devnet seed artifacts ===
 .devnet/
 devnet.config.json
