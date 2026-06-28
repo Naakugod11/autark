@@ -1,204 +1,122 @@
 'use client';
 
-import Link from 'next/link';
-import { useJobs, useAgents } from '@/app/components/ChainStore';
+/**
+ * INTEGRATION PROOF — raw devnet data dump.
+ *
+ * This page exists only to confirm the browser-safe Autark read client
+ * (web/lib/autark.ts) connects to live devnet and returns real data.
+ * Layout/design/architecture are Mert's territory; see AUTARK_DASHBOARD_HANDOVER.md.
+ */
 
-// ─── Ticker ───────────────────────────────────────────────────────────────────
+import { useEffect, useState } from 'react';
+import { fetchAgents, fetchRecentJobs, type AgentData, type JobOfferData } from '@/lib/autark';
 
-// Duplicate items so translateX(-50%) snaps back to an identical copy — seamless loop.
-function Ticker({ items }: { items: string[] }) {
-  const looped = [...items, ...items];
-  return (
-    <div className="w-full overflow-hidden border-y border-white/10">
-      <div className="animate-ticker flex w-max items-center py-[11px]">
-        {looped.map((item, i) => (
-          <span key={i} className="flex items-center shrink-0">
-            <span className="font-mono text-[10px] tracking-[0.22em] text-muted/55 uppercase px-8 whitespace-nowrap">
-              {item}
-            </span>
-            <span className="font-mono text-[10px] text-purple/35 shrink-0 select-none">·</span>
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
+export default function IntegrationProof() {
+  const [agents, setAgents]   = useState<AgentData[] | null>(null);
+  const [jobs,   setJobs]     = useState<JobOfferData[] | null>(null);
+  const [error,  setError]    = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [ts, setTs]           = useState<string>('');
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+  async function load() {
+    setLoading(true);
+    setError(null);
+    try {
+      const [a, j] = await Promise.all([fetchAgents(), fetchRecentJobs()]);
+      setAgents(a);
+      setJobs(j);
+      setTs(new Date().toISOString());
+    } catch (e: any) {
+      setError(String(e?.message ?? e));
+    } finally {
+      setLoading(false);
+    }
+  }
 
-export default function Home() {
-  const { jobs }   = useJobs();
-  const { agents } = useAgents();
-
-  const settledVol = jobs
-    .filter(j => j.status === 'SETTLED')
-    .reduce((sum, j) => sum + parseFloat(j.amount), 0);
-
-  const tickerItems = [
-    `${jobs.length.toLocaleString()} TRADES SETTLED`,
-    `${settledVol.toFixed(2)} USDC VOLUME`,
-    `${agents.filter(a => a.active).length} AGENTS ONLINE`,
-    '1.2s AVG SETTLEMENT',
-    '100% ON-CHAIN',
-  ];
+  useEffect(() => { load(); }, []);
 
   return (
-    <main className="relative flex flex-1 flex-col items-center justify-center bg-bg overflow-hidden">
+    <main style={{ fontFamily: 'monospace', padding: 24 }}>
+      <h1>Autark — integration proof</h1>
+      <p style={{ color: '#888', fontSize: 12 }}>
+        raw devnet data · web/lib/autark.ts · {ts || '…'}
+      </p>
+      <button onClick={load} disabled={loading} style={{ marginBottom: 24 }}>
+        {loading ? 'loading…' : 'refresh'}
+      </button>
 
-      {/* Layer 1 — Animated gradient mesh */}
-      <div className="gradient-mesh absolute inset-0" />
+      {error && <pre style={{ color: 'red' }}>ERROR: {error}</pre>}
 
-      {/* Layer 2 — Dot grid */}
-      <div className="dot-grid pointer-events-none absolute inset-0 opacity-25" />
+      <h2>Agents ({agents?.length ?? '…'})</h2>
+      {agents && (
+        <table border={1} cellPadding={6} style={{ borderCollapse: 'collapse', fontSize: 12 }}>
+          <thead>
+            <tr>
+              <th>pubkey</th>
+              <th>owner</th>
+              <th>capabilities</th>
+              <th>stake (USDC)</th>
+              <th>scoreCompleted</th>
+              <th>scoreFailed</th>
+              <th>scoreVolume (USDC)</th>
+              <th>slashEvents</th>
+              <th>openJobs</th>
+            </tr>
+          </thead>
+          <tbody>
+            {agents.map((a) => (
+              <tr key={a.pubkey.toBase58()}>
+                <td>{a.pubkey.toBase58()}</td>
+                <td>{a.owner.toBase58()}</td>
+                <td>{a.capabilities.join(', ')}</td>
+                <td>{(a.stakeAmount / 1e6).toFixed(2)}</td>
+                <td>{a.scoreCompleted}</td>
+                <td>{a.scoreFailed}</td>
+                <td>{(a.scoreVolume / 1e6).toFixed(2)}</td>
+                <td>{a.slashEvents}</td>
+                <td>{a.openJobs}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
 
-      {/* Layer 3 — Soft glow orbs */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div
-          className="animate-float absolute -top-64 left-1/2 -translate-x-1/2 w-[1000px] h-[900px] rounded-full bg-purple/30 blur-[160px]"
-        />
-        <div
-          className="animate-float-slow absolute -bottom-48 -left-48 w-[800px] h-[700px] rounded-full bg-blue/20 blur-[140px]"
-        />
-        <div
-          className="animate-float absolute top-1/2 -right-72 w-[600px] h-[600px] rounded-full bg-purple/15 blur-[120px]"
-          style={{ animationDelay: '-5s' }}
-        />
-      </div>
+      <h2>Recent Jobs ({jobs?.length ?? '…'})</h2>
+      {jobs && (
+        <table border={1} cellPadding={6} style={{ borderCollapse: 'collapse', fontSize: 12 }}>
+          <thead>
+            <tr>
+              <th>pubkey</th>
+              <th>status</th>
+              <th>amount (USDC)</th>
+              <th>consumer</th>
+              <th>provider</th>
+              <th>createdAt</th>
+            </tr>
+          </thead>
+          <tbody>
+            {jobs.map((j) => (
+              <tr key={j.pubkey.toBase58()}>
+                <td>{j.pubkey.toBase58().slice(0, 16)}…</td>
+                <td>{j.status}</td>
+                <td>{(j.amount / 1e6).toFixed(2)}</td>
+                <td>{j.consumer.toBase58().slice(0, 8)}…</td>
+                <td>{j.provider.toBase58().slice(0, 8)}…</td>
+                <td>{new Date(j.createdAt * 1000).toISOString().slice(0, 16)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
 
-      {/* ── Hero content ────────────────────────────────────────── */}
-      <div className="relative z-10 flex flex-col items-center text-center px-4 py-24 w-full max-w-screen-xl mx-auto">
-
-        {/* Logo icon */}
-        <div
-          className="animate-slide-up mb-8"
-          style={{ animationDelay: '0s' }}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.svg" alt="Agent Bazaar" width={80} height={80} className="animate-pulse" />
-        </div>
-
-        {/* Live network indicator */}
-        <div
-          className="animate-slide-up flex items-center gap-2 mb-5"
-          style={{ animationDelay: '0s' }}
-        >
-          <span className="w-1.5 h-1.5 rounded-full bg-[#4ade80] animate-pulse" />
-          <span className="text-[10px] tracking-[0.2em] text-muted/55 lowercase">
-            live on solana devnet
-          </span>
-        </div>
-
-        {/* Eyebrow */}
-        <p
-          className="animate-slide-up text-xs font-semibold tracking-[0.4em] text-purple/70 uppercase mb-8"
-          style={{ animationDelay: '0.1s' }}
-        >
-          Built on Solana · Live
-        </p>
-
-        {/*
-          pb-6 gives the descenders (e.g. 'g') physical space below the baseline
-          so the background-clip region never crops them.
-          overflow-visible ensures the painted glyphs aren't clipped by the box.
-        */}
-        <h1
-          className="animate-slide-up animated-gradient-text [font-family:var(--font-jetbrains-mono)] font-bold w-full leading-[1.1] tracking-tight overflow-visible pb-6 mb-2"
-          style={{
-            fontSize: 'clamp(3.5rem, 13vw, 8.5rem)',
-            animationDelay: '0.25s',
-          }}
-        >
-          Agent Bazaar
-        </h1>
-
-        {/* Glowing rule */}
-        <div
-          className="animate-slide-up w-full max-w-2xl h-px bg-gradient-to-r from-transparent via-purple to-transparent mb-9"
-          style={{
-            animationDelay: '0.5s',
-            boxShadow: '0 0 28px 4px rgba(124,58,237,0.65)',
-          }}
-        />
-
-        {/* Subtitle */}
-        <p
-          className="animate-slide-up text-lg md:text-xl text-muted max-w-sm mb-10 leading-relaxed"
-          style={{ animationDelay: '0.65s' }}
-        >
-          Autonomous agents. Real payments. Zero humans.
-        </p>
-
-        {/* Live ticker */}
-        <div
-          className="animate-slide-up w-full mb-12"
-          style={{ animationDelay: '0.85s' }}
-        >
-          <Ticker items={tickerItems} />
-        </div>
-
-        {/* Buttons */}
-        <div
-          className="animate-slide-up flex flex-wrap items-center justify-center gap-3"
-          style={{ animationDelay: '1.05s' }}
-        >
-          <Link
-            href="/floor"
-            className="px-7 py-3.5 rounded-lg bg-purple text-white font-semibold text-sm tracking-wide hover:bg-purple/85 transition-colors"
-          >
-            Enter the Floor
-          </Link>
-          <Link
-            href="/registry"
-            className="px-7 py-3.5 rounded-lg border border-purple/45 text-purple font-semibold text-sm tracking-wide hover:bg-purple/10 transition-colors"
-          >
-            View Agents
-          </Link>
-          <a
-            href="#"
-            className="px-7 py-3.5 rounded-lg text-muted font-semibold text-sm tracking-wide hover:text-fg transition-colors"
-          >
-            Live Demo
-          </a>
-        </div>
-
-        {/* ── How it works ────────────────────────────────────────── */}
-        <div
-          className="animate-slide-up mt-20 w-full max-w-3xl"
-          style={{ animationDelay: '1.3s' }}
-        >
-          <p className="font-mono text-[10px] tracking-[0.35em] text-muted/45 uppercase mb-7 text-center">
-            How it works
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-
-            <div className="flex flex-col p-5 rounded-lg border border-white/8 bg-white/[0.03] text-left">
-              <span className="font-mono text-[10px] tracking-[0.3em] text-purple/50 mb-3">01</span>
-              <h3 className="text-sm font-semibold text-fg mb-2">Register</h3>
-              <p className="text-xs text-muted/65 leading-relaxed">
-                Agents publish their capabilities and price on-chain.
-              </p>
-            </div>
-
-            <div className="flex flex-col p-5 rounded-lg border border-white/8 bg-white/[0.03] text-left">
-              <span className="font-mono text-[10px] tracking-[0.3em] text-purple/50 mb-3">02</span>
-              <h3 className="text-sm font-semibold text-fg mb-2">Propose</h3>
-              <p className="text-xs text-muted/65 leading-relaxed">
-                Consumers lock USDC in escrow for a specific job.
-              </p>
-            </div>
-
-            <div className="flex flex-col p-5 rounded-lg border border-white/8 bg-white/[0.03] text-left">
-              <span className="font-mono text-[10px] tracking-[0.3em] text-purple/50 mb-3">03</span>
-              <h3 className="text-sm font-semibold text-fg mb-2">Settle</h3>
-              <p className="text-xs text-muted/65 leading-relaxed">
-                Provider delivers, escrow releases, ~1.4s end-to-end.
-              </p>
-            </div>
-
-          </div>
-        </div>
-
-      </div>
+      <details style={{ marginTop: 32 }}>
+        <summary style={{ cursor: 'pointer', color: '#888' }}>raw JSON</summary>
+        <pre style={{ fontSize: 10, maxHeight: 400, overflow: 'auto' }}>
+          {JSON.stringify({ agents, jobs }, (_, v) =>
+            v?.toBase58 ? v.toBase58() : v,
+          2)}
+        </pre>
+      </details>
     </main>
   );
 }
