@@ -1,4 +1,9 @@
-<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-  <path d="M5 10 L18 10 L14 6 M5 10 L14 14" fill="none" stroke="#a78bfa" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M27 22 L14 22 L18 26 M27 22 L18 18" fill="none" stroke="#f5f5f7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+<style>path,circle,ellipse{stroke:#15120D;fill:#15120D}@media (prefers-color-scheme:dark){path,circle,ellipse{stroke:#ECE6DA;fill:#ECE6DA}}</style>
+<g fill="none" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+<path d="M58,44 L74,36"/><path d="M59,50 L77,50"/><path d="M58,56 L74,64"/>
+<path d="M42,44 L26,36"/><path d="M41,50 L23,50"/><path d="M42,56 L26,64"/>
+</g>
+<circle cx="50" cy="30" r="8"/><circle cx="50" cy="48" r="9"/><ellipse cx="50" cy="72" rx="12" ry="14"/>
 </svg>
