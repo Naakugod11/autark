@@ -81,7 +81,7 @@ The **contract** stores all state — reputation, escrow balances, dispute statu
 ### Prerequisites
 
 - Node.js 18+
-- Solana CLI (for keypair generation)
+- Git
 
 ### 1. Clone and install
 
@@ -91,24 +91,16 @@ cd autark
 npm install
 ```
 
-### 2. Configure environment
+### 2. Set your RPC endpoint
+
+The only env var any script reads is `SOLANA_RPC_URL`. Public devnet works but hits rate limits fast; a [Helius](https://helius.dev) devnet key is recommended for the demo:
 
 ```bash
-cp .env.example .env
+export SOLANA_RPC_URL=<YOUR_HELIUS_DEVNET_URL>
+# or put it in a .env file — all scripts call dotenv automatically
 ```
 
-Set your RPC endpoint (recommended: Helius devnet for rate-limit headroom):
-
-```env
-SOLANA_RPC_URL=<YOUR_HELIUS_DEVNET_URL>
-ANTHROPIC_API_KEY=sk-ant-...
-```
-
-The demo uses a funder keypair pre-seeded on devnet. If you have your own:
-
-```env
-FUNDER_PRIVATE_KEY=<base58-private-key>
-```
+`ANTHROPIC_API_KEY` is optional for `npm run demo`: without it the honest agent returns a canned response instead of calling Claude. Override the keypair path with `WALLET_KEYPAIR_PATH=<path>` if your Solana wallet isn't at the default location.
 
 ### 3. Run the demo
 
@@ -116,14 +108,14 @@ FUNDER_PRIVATE_KEY=<base58-private-key>
 npm run demo
 ```
 
-Two arcs run back-to-back on live devnet, each with fresh keypairs:
+**Requires:** a funded deployer keypair at `~/.config/solana/id.json` (the Solana CLI default wallet) that holds mint authority over the devnet test USDC. The demo generates fresh agent and consumer keypairs each run and funds them from this wallet — nothing carries over between runs.
+
+Two arcs run back-to-back on live devnet:
 
 - **Act 1 — honest agent:** hire → deliver → settle. `scoreCompleted` goes 0 → 1 on-chain.
 - **Act 2 — flaky agent:** hire → no delivery → challenge → slash. Collateral moves to the slashing pool.
 
-All narration is driven by real on-chain events. Nothing is simulated.
-
-Add `--slow` for live-audience pacing, `--verbose` for full poll logs.
+All narration is driven by real on-chain events. Nothing is simulated. Add `--slow` for live-audience pacing, `--verbose` for full poll logs.
 
 ### 4. Smoke test
 
@@ -131,14 +123,16 @@ Add `--slow` for live-audience pacing, `--verbose` for full poll logs.
 npm run smoke
 ```
 
-End-to-end runtime validation: registers an agent, runs targeted-hire + challenge arcs autonomously with no `notifyJob` calls — the agent discovers jobs purely from chain state.
+End-to-end runtime validation: registers an agent, runs targeted-hire + challenge arcs autonomously with no `notifyJob` calls — the agent discovers jobs purely from chain state. Requires the deployer keypair (`~/.config/solana/id.json`) and a pre-seeded consumer wallet at `.devnet/agent-wallet-2.json` (included in the repo).
 
 ### 5. Deploy your own agent
+
+No deployer keypair needed — a new keypair is generated for you on first run.
 
 See **[DEPLOY_YOUR_AGENT.md](./DEPLOY_YOUR_AGENT.md)** for the full walkthrough. Short version:
 
 ```bash
-# Generate keypair + see your address
+# Generate your agent keypair + see your address
 npx tsx deploy-your-agent.ts
 
 # DM @naaku_builds on X with your address → receive devnet SOL + test USDC
