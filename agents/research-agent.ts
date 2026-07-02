@@ -1,23 +1,30 @@
 /**
- * agents/research-agent.ts — Claude-backed Autark agent (token-research capability).
+ * agents/research-agent.ts — on-chain token research agent (Autark).
  *
- * Uses the AutarkAgent runtime. onJob makes a single Anthropic call and returns
- * a brief token/wallet analysis. This proves the end-to-end runtime loop without
- * implementing a full 0xpilot-style research pipeline — that is a later layer.
+ * Delivers structured token risk verdicts via the Autark protocol. Uses
+ * sdk/src/intelligence/analyze.ts for on-chain signals + LLM verdict.
  *
  * Run standalone:  npx tsx agents/research-agent.ts
- * Or import researchAgent and call start()/stop() from a test script.
+ * Import in tests: researchAgent (start/stop), registerJobRequest
  *
- * Requires env:  ANTHROPIC_API_KEY
- * Keypair:       .devnet/agent-wallet-1.json (or AGENT_KEYPAIR_PATH)
+ * Env:
+ *   ANTHROPIC_API_KEY   — optional; without it the stub path runs (in-character, same format)
+ *   SOLANA_RPC_URL      — optional; defaults to public devnet
+ *   AGENT_KEYPAIR_PATH  — optional; defaults to .devnet/agent-wallet-1.json
+ *
+ * Job request convention:
+ *   The JobOffer account has no free-text field. Consumers call
+ *   registerJobRequest(jobPubkey.toBase58(), target) BEFORE proposeJob().
+ *   target = a Solana mint address (base58) or a ticker/name like "WIF".
+ *   If no request is registered, the agent analyzes the payment mint as a fallback.
  */
 
 import "dotenv/config";
 import * as fs from "fs";
 import * as path from "path";
-import Anthropic from "@anthropic-ai/sdk";
 import { Keypair, PublicKey } from "@solana/web3.js";
 import { AutarkAgent } from "../sdk/src/runtime";
+import { analyze } from "../sdk/src/intelligence/analyze";
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
@@ -28,8 +35,9 @@ const KEYPAIR_PATH =
 const CONFIG_PATH = path.join(REPO_ROOT, "devnet.config.json");
 
 function loadKeypair(filePath: string): Keypair {
-  const raw = JSON.parse(fs.readFileSync(filePath, "utf-8"));
-  return Keypair.fromSecretKey(Buffer.from(raw));
+  return Keypair.fromSecretKey(
+    Buffer.from(JSON.parse(fs.readFileSync(filePath, "utf-8")))
+  );
 }
 
 if (!fs.existsSync(CONFIG_PATH)) {
@@ -39,54 +47,71 @@ const devnetConfig = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf-8"));
 const testMint = new PublicKey(devnetConfig.testMint);
 const keypair = loadKeypair(KEYPAIR_PATH);
 
+// ANTHROPIC_API_KEY is optional — without it analyze() returns an in-character stub.
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 if (!ANTHROPIC_API_KEY) {
-  throw new Error("ANTHROPIC_API_KEY env var is required");
+  console.warn(
+    "[research-agent] ANTHROPIC_API_KEY not set — running in keyless mode (in-character stub verdicts)"
+  );
 }
-const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
+
+// ── Job request registry ──────────────────────────────────────────────────────
+// The JobOffer account has no free-text memo field, so consumers register the
+// analysis target here (keyed by jobPubkey.toBase58()) before calling proposeJob.
+// The runtime smoke and demo do this automatically. External consumers must call
+// registerJobRequest(...) on the same process before the agent's next poll cycle.
+
+const _requestRegistry = new Map<string, string>();
+
+export function registerJobRequest(jobKey: string, target: string): void {
+  _requestRegistry.set(jobKey, target);
+}
 
 // ── Agent instance ────────────────────────────────────────────────────────────
 
 export const researchAgent = new AutarkAgent({
   keypair,
   capabilities: ["token-research"],
-  endpointUrl: "https://agent1.autark.smoke.test", // placeholder; HTTP server is a later layer
+  endpointUrl: "https://agent1.autark.smoke.test",
   mint: testMint,
   minStake: 20.0,
   minPrice: 0,
   pollIntervalMs: 5_000,
 
   async onJob(job) {
-    const consumerShort = job.consumer.toBase58().slice(0, 8);
+    const jobKey = job.pubkey.toBase58();
     const amountUsdc = (job.amount / 1_000_000).toFixed(2);
+
+    // Look up the registered target; fall back to the payment mint address.
+    const target = _requestRegistry.get(jobKey) ?? job.mint.toBase58();
+    _requestRegistry.delete(jobKey); // clean up after use
+
     console.log(
-      `[research-agent] onJob — consumer=${consumerShort}… amount=${amountUsdc} USDC`
+      `[research-agent] onJob — consumer=${job.consumer.toBase58().slice(0, 8)}… ` +
+        `amount=${amountUsdc} USDC  target=${target.slice(0, 16)}…`
     );
 
     try {
-      const msg = await anthropic.messages.create({
-        model: "claude-sonnet-4-6",
-        max_tokens: 128,
-        messages: [
-          {
-            role: "user",
-            content:
-              `You are an automated Solana token research agent fulfilling a paid on-chain job. ` +
-              `Job amount: ${amountUsdc} USDC. Consumer wallet: ${job.consumer.toBase58()}. ` +
-              `Provide exactly two sentences of generic Solana DeFi market commentary ` +
-              `acknowledging this request.`,
-          },
-        ],
-      });
-
-      const text = (msg.content[0] as any).text as string;
-      console.log(
-        `[research-agent] Analysis (${text.length} chars): ${text.slice(0, 80)}…`
+      const verdict = await analyze(
+        target,
+        researchAgent.connection,
+        ANTHROPIC_API_KEY
       );
-      return { deliver: true, result: text };
+
+      const mode = ANTHROPIC_API_KEY ? "LLM" : "stub";
+      console.log(
+        `[research-agent] ✓ Verdict (${mode}, ${verdict.length} chars):\n` +
+          verdict
+            .split("\n")
+            .map((l) => `  ${l}`)
+            .join("\n")
+      );
+
+      return { deliver: true, result: verdict };
     } catch (e: any) {
-      console.error(`[research-agent] Anthropic error: ${e?.message ?? e}`);
-      // Decline so the consumer gets their USDC back rather than hanging.
+      // analyze() already catches LLM errors internally — this catches signal
+      // fetch failures or other unexpected throws.
+      console.error(`[research-agent] onJob error: ${e?.message ?? e}`);
       return { decline: true };
     }
   },

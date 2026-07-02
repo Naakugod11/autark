@@ -122,42 +122,43 @@ async function getUsdcBalance(conn: Connection, owner: PublicKey, mint: PublicKe
   }
 }
 
-// ── Template onJob ─────────────────────────────────────────────────────────────
-// Works with NO API key — canned deterministic analysis.
+// ── onJob ──────────────────────────────────────────────────────────────────────
+// Uses sdk/src/intelligence/analyze.ts for on-chain signals + role-locked LLM.
+// Works in both modes:
+//   - With ANTHROPIC_API_KEY: fetches real on-chain signals, calls Claude, returns
+//     a structured token risk verdict in character.
+//   - Without ANTHROPIC_API_KEY: returns a deterministic in-character stub in the
+//     same format — never out-of-character meta-commentary.
 //
-// To use Claude instead:
-//   1. npm install @anthropic-ai/sdk
-//   2. Set ANTHROPIC_API_KEY in .env
-//   3. Uncomment the Claude block below.
+// Job target convention: call registerJobRequest(jobPubkey.toBase58(), target)
+// before proposing the job. If not set, defaults to the payment mint address.
+// See agents/research-agent.ts for the full convention docs.
+
+import { analyze } from "./sdk/src/intelligence/analyze";
 
 async function onJob(
   job: JobOfferData
 ): Promise<{ deliver: true; result: string } | { decline: true }> {
   const amountUsdc = (job.amount / 1_000_000).toFixed(2);
 
-  // ── Optional Claude block ─────────────────────────────────────────────────
-  // import Anthropic from "@anthropic-ai/sdk";
-  // if (process.env.ANTHROPIC_API_KEY) {
-  //   const ai = new Anthropic();
-  //   const msg = await ai.messages.create({
-  //     model: "claude-sonnet-4-6",
-  //     max_tokens: 200,
-  //     messages: [{
-  //       role: "user",
-  //       content: `Token-research job: ${amountUsdc} USDC, consumer ${job.consumer.toBase58().slice(0,8)}. Give a 2-sentence analysis.`,
-  //     }],
-  //   });
-  //   return { deliver: true, result: (msg.content[0] as any).text };
-  // }
-  // ─────────────────────────────────────────────────────────────────────────
+  // Target defaults to the payment mint. In a real consumer integration,
+  // register the actual token to analyze before calling proposeJob.
+  const target = job.mint.toBase58();
 
-  const result = [
-    `[${AGENT_NAME}] Token-research analysis for consumer ${job.consumer.toBase58().slice(0, 8)}…`,
-    `Job value: ${amountUsdc} USDC | Delivered autonomously via Autark protocol on Solana devnet.`,
-    `Assessment: Market conditions nominal. No anomalies detected. Recommendation: proceed.`,
-  ].join(" ");
+  try {
+    const { Connection } = await import("@solana/web3.js");
+    const conn = new Connection(
+      process.env.SOLANA_RPC_URL ?? "https://api.devnet.solana.com",
+      "confirmed"
+    );
+    const verdict = await analyze(target, conn, process.env.ANTHROPIC_API_KEY);
+    _log(`[${AGENT_NAME}] Delivered verdict (${verdict.length} chars):\n${verdict}`);
+    return { deliver: true, result: verdict };
+  } catch (e: any) {
+    _error(`[${AGENT_NAME}] onJob error: ${e?.message ?? e}`);
+    return { decline: true };
+  }
 
-  return { deliver: true, result };
 }
 
 // ── Simple event poller (selftest only) ────────────────────────────────────────

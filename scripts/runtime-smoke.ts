@@ -39,7 +39,7 @@ import {
   JobOfferData,
   ChallengeData,
 } from "../sdk/src/types";
-import { researchAgent } from "../agents/research-agent";
+import { researchAgent, registerJobRequest } from "../agents/research-agent";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -213,6 +213,11 @@ async function main() {
   // by scanning for JobOffer accounts with provider == researchAgent.me and
   // reading job_id off each account.
 
+  // Register the analysis target BEFORE proposeJob so the agent finds it on
+  // its next poll cycle. Target = the devnet test mint address (valid on-chain
+  // signals available). See agents/research-agent.ts for the convention.
+  registerJobRequest(happyJobPda.toBase58(), testMint.toBase58());
+
   step("proposeJob → consumer");
   {
     const sig = await withRetry("proposeJob", () =>
@@ -293,7 +298,8 @@ async function main() {
   const disputeJobPda = jobOfferPda(consumer.publicKey, disputeJobId);
   const now2 = Math.floor(Date.now() / 1000);
 
-  // Again: no notifyJob. Agent discovers the second job on its own.
+  // Again: no notifyJob. Register target before proposing.
+  registerJobRequest(disputeJobPda.toBase58(), testMint.toBase58());
 
   step("proposeJob #2 → consumer");
   {

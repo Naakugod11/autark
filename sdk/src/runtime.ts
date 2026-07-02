@@ -55,6 +55,7 @@ export class AutarkAgent {
   private readonly cfg: Required<AgentRuntimeConfig>;
   private readonly client: AutarkClient;
   readonly me: PublicKey;
+  get connection() { return this.client.connection; }
 
   private intervalId?: ReturnType<typeof setInterval>;
   private running = false;
