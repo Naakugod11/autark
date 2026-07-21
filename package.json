@@ -3,13 +3,13 @@
   "scripts": {
     "lint:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
     "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check",
-    "create-mint": "tsx scripts/create-mint.ts",
-    "fund-agents": "tsx scripts/fund-agents.ts",
-    "test-sdk": "tsx sdk/test-sdk.ts",
-    "demo": "tsx demo.ts"
+    "demo": "tsx scripts/demo.ts",
+    "faucet": "tsx scripts/faucet.ts",
+    "smoke": "tsx scripts/runtime-smoke.ts"
   },
   "dependencies": {
     "@anchor-lang/core": "^1.0.2",
+    "@anthropic-ai/sdk": "^0.105.0",
     "@solana/web3.js": "^1.98.4",
     "bs58": "^6.0.0",
     "dotenv": "^17.4.2"

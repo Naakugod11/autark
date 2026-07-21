@@ -1,122 +1,56 @@
-'use client';
+"use client";
 
-/**
- * INTEGRATION PROOF — raw devnet data dump.
- *
- * This page exists only to confirm the browser-safe Autark read client
- * (web/lib/autark.ts) connects to live devnet and returns real data.
- * Layout/design/architecture are Mert's territory; see AUTARK_DASHBOARD_HANDOVER.md.
- */
+import { useMemo } from "react";
+import { useEconomy } from "@/lib/economy";
+import { TopBar } from "@/components/TopBar";
+import { FleetPanel } from "@/components/FleetPanel";
+import { LiveFeed } from "@/components/LiveFeed";
+import { VitalsPanel } from "@/components/VitalsPanel";
+import { SlashOverlay } from "@/components/SlashOverlay";
 
-import { useEffect, useState } from 'react';
-import { fetchAgents, fetchRecentJobs, type AgentData, type JobOfferData } from '@/lib/autark';
+export default function Dashboard() {
+  const { status, error, agents, feed, totalSlashed, volume24h, eventsLast5Min, lastSlashId } =
+    useEconomy();
 
-export default function IntegrationProof() {
-  const [agents, setAgents]   = useState<AgentData[] | null>(null);
-  const [jobs,   setJobs]     = useState<JobOfferData[] | null>(null);
-  const [error,  setError]    = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [ts, setTs]           = useState<string>('');
+  const agentsByOwner = useMemo(() => {
+    const m = new Map<string, (typeof agents)[number]>();
+    for (const a of agents) m.set(a.owner, a);
+    return m;
+  }, [agents]);
 
-  async function load() {
-    setLoading(true);
-    setError(null);
-    try {
-      const [a, j] = await Promise.all([fetchAgents(), fetchRecentJobs()]);
-      setAgents(a);
-      setJobs(j);
-      setTs(new Date().toISOString());
-    } catch (e: any) {
-      setError(String(e?.message ?? e));
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => { load(); }, []);
+  const lastSlashRow = useMemo(
+    () => (lastSlashId ? (feed.find((r) => r.id === lastSlashId) ?? null) : null),
+    [lastSlashId, feed]
+  );
 
   return (
-    <main style={{ fontFamily: 'monospace', padding: 24 }}>
-      <h1>Autark — integration proof</h1>
-      <p style={{ color: '#888', fontSize: 12 }}>
-        raw devnet data · web/lib/autark.ts · {ts || '…'}
-      </p>
-      <button onClick={load} disabled={loading} style={{ marginBottom: 24 }}>
-        {loading ? 'loading…' : 'refresh'}
-      </button>
+    <div className="flex h-screen flex-col overflow-hidden bg-ink text-bone">
+      <TopBar status={status} />
 
-      {error && <pre style={{ color: 'red' }}>ERROR: {error}</pre>}
-
-      <h2>Agents ({agents?.length ?? '…'})</h2>
-      {agents && (
-        <table border={1} cellPadding={6} style={{ borderCollapse: 'collapse', fontSize: 12 }}>
-          <thead>
-            <tr>
-              <th>pubkey</th>
-              <th>owner</th>
-              <th>capabilities</th>
-              <th>stake (USDC)</th>
-              <th>scoreCompleted</th>
-              <th>scoreFailed</th>
-              <th>scoreVolume (USDC)</th>
-              <th>slashEvents</th>
-              <th>openJobs</th>
-            </tr>
-          </thead>
-          <tbody>
-            {agents.map((a) => (
-              <tr key={a.pubkey.toBase58()}>
-                <td>{a.pubkey.toBase58()}</td>
-                <td>{a.owner.toBase58()}</td>
-                <td>{a.capabilities.join(', ')}</td>
-                <td>{(a.stakeAmount / 1e6).toFixed(2)}</td>
-                <td>{a.scoreCompleted}</td>
-                <td>{a.scoreFailed}</td>
-                <td>{(a.scoreVolume / 1e6).toFixed(2)}</td>
-                <td>{a.slashEvents}</td>
-                <td>{a.openJobs}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {status === "error" && (
+        <div className="border-b border-danger bg-danger-dim/40 px-4 py-2 text-[11px] text-danger">
+          {error ?? "connection failed"} — check NEXT_PUBLIC_SOLANA_RPC_URL
+        </div>
       )}
 
-      <h2>Recent Jobs ({jobs?.length ?? '…'})</h2>
-      {jobs && (
-        <table border={1} cellPadding={6} style={{ borderCollapse: 'collapse', fontSize: 12 }}>
-          <thead>
-            <tr>
-              <th>pubkey</th>
-              <th>status</th>
-              <th>amount (USDC)</th>
-              <th>consumer</th>
-              <th>provider</th>
-              <th>createdAt</th>
-            </tr>
-          </thead>
-          <tbody>
-            {jobs.map((j) => (
-              <tr key={j.pubkey.toBase58()}>
-                <td>{j.pubkey.toBase58().slice(0, 16)}…</td>
-                <td>{j.status}</td>
-                <td>{(j.amount / 1e6).toFixed(2)}</td>
-                <td>{j.consumer.toBase58().slice(0, 8)}…</td>
-                <td>{j.provider.toBase58().slice(0, 8)}…</td>
-                <td>{new Date(j.createdAt * 1000).toISOString().slice(0, 16)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      <main className="grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-hidden p-2 xl:grid-cols-[300px_1fr_320px]">
+        <div className="order-3 min-h-[280px] xl:order-1 xl:min-h-0">
+          <FleetPanel agents={agents} />
+        </div>
+        <div className="order-1 min-h-[420px] xl:order-2 xl:min-h-0">
+          <LiveFeed feed={feed} agents={agentsByOwner} eventsLast5Min={eventsLast5Min} />
+        </div>
+        <div className="order-2 min-h-[320px] xl:order-3 xl:min-h-0">
+          <VitalsPanel
+            agents={agents}
+            totalSlashed={totalSlashed}
+            volume24h={volume24h}
+            eventsLast5Min={eventsLast5Min}
+          />
+        </div>
+      </main>
 
-      <details style={{ marginTop: 32 }}>
-        <summary style={{ cursor: 'pointer', color: '#888' }}>raw JSON</summary>
-        <pre style={{ fontSize: 10, maxHeight: 400, overflow: 'auto' }}>
-          {JSON.stringify({ agents, jobs }, (_, v) =>
-            v?.toBase58 ? v.toBase58() : v,
-          2)}
-        </pre>
-      </details>
-    </main>
+      <SlashOverlay row={lastSlashRow} />
+    </div>
   );
 }

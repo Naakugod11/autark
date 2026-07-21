@@ -1,177 +1,120 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #0a0a1a;
-  --purple: #7c3aed;
-  --blue: #3b82f6;
-  --fg: #f8fafc;
-  --muted: #64748b;
-  --success: #10b981;
-  --warning: #f59e0b;
+  --ink: #15120d;
+  --ink-raised: #1c1811;
+  --ink-line: #2a251c;
+  --bone: #ece6da;
+  --bone-dim: #a49c88;
+  --bone-faint: #6b6656;
+  --amber: #e0a100;
+  --amber-dim: #7a5c14;
+  --warn: #d97706;
+  --danger: #e2373a;
+  --danger-dim: #5c1f1f;
 }
 
 @theme inline {
-  --color-bg: var(--bg);
-  --color-purple: var(--purple);
-  --color-blue: var(--blue);
-  --color-fg: var(--fg);
-  --color-muted: var(--muted);
-  --color-success: var(--success);
-  --color-warning: var(--warning);
-  --font-sans: var(--font-inter);
+  --color-ink: var(--ink);
+  --color-ink-raised: var(--ink-raised);
+  --color-ink-line: var(--ink-line);
+  --color-bone: var(--bone);
+  --color-bone-dim: var(--bone-dim);
+  --color-bone-faint: var(--bone-faint);
+  --color-amber: var(--amber);
+  --color-amber-dim: var(--amber-dim);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+  --color-danger-dim: var(--danger-dim);
+  --font-mono: var(--font-jetbrains-mono);
 
-  --animate-float:      float 9s ease-in-out infinite;
-  --animate-float-slow: float-slow 13s ease-in-out infinite;
-  --animate-slide-up:   slide-up-fade 0.5s ease-out both;
-  --animate-live-pulse: live-pulse 2s ease-in-out infinite;
-  --animate-ticker:     ticker-scroll 25s linear infinite;
+  --animate-slide-in: slide-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-pulse-dot: pulse-dot 1.8s ease-in-out infinite;
+  --animate-slash-flash: slash-flash 0.9s ease-out;
+  --animate-slash-shake: slash-shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  --animate-scan: scan 6s linear infinite;
 }
 
-/* ── Keyframes ──────────────────────────────────────────────── */
-
-@keyframes float {
-  0%, 100% { transform: translateY(0px) scale(1); }
-  33%       { transform: translateY(-32px) scale(1.04); }
-  66%       { transform: translateY(16px) scale(0.97); }
-}
-
-@keyframes float-slow {
-  0%, 100% { transform: translateY(0px) translateX(0px); }
-  40%      { transform: translateY(22px) translateX(-14px); }
-  70%      { transform: translateY(-12px) translateX(10px); }
-}
-
-@keyframes gradient-shift {
-  0%, 100% { background-position: 0% center; }
-  50%      { background-position: 100% center; }
-}
-
-/*
- * Four-point orbit through the 400%×400% gradient canvas.
- * Gives the mesh a slow, looping Northern Lights feel.
- */
-@keyframes mesh-shift {
-  0%   { background-position: 0%   50%; }
-  25%  { background-position: 100% 0%;  }
-  50%  { background-position: 100% 100%; }
-  75%  { background-position: 0%   100%; }
-  100% { background-position: 0%   50%; }
-}
-
-/*
- * Ticker — animates from 0 to -50% so the duplicated second half
- * snaps seamlessly back to the start position.
- */
-@keyframes ticker-scroll {
-  from { transform: translateX(0); }
-  to   { transform: translateX(-50%); }
-}
-
-@keyframes dot-drift {
-  from { background-position: 0 0; }
-  to   { background-position: 0 -160px; }
-}
-
-@keyframes slide-up-fade {
-  from { opacity: 0; transform: translateY(12px); }
+@keyframes slide-in {
+  from { opacity: 0; transform: translateY(-6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes live-pulse {
-  0%, 100% {
-    transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.55);
-  }
-  50% {
-    transform: scale(1.3);
-    box-shadow: 0 0 0 7px rgba(124, 58, 237, 0);
-  }
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(224, 161, 0, 0.5); }
+  50%      { opacity: 0.55; box-shadow: 0 0 0 5px rgba(224, 161, 0, 0); }
 }
 
-/* ── Plain CSS classes ──────────────────────────────────────── */
-
-/*
- * Animated gradient text.
- * background-position is not animatable via Tailwind arbitrary values,
- * so the full rule lives here.
- */
-.animated-gradient-text {
-  background: linear-gradient(90deg, #7c3aed, #3b82f6, #a78bfa, #3b82f6, #7c3aed);
-  background-size: 300% 100%;
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-  animation: gradient-shift 5s ease-in-out infinite;
+@keyframes slash-flash {
+  0%   { opacity: 0; }
+  12%  { opacity: 1; }
+  100% { opacity: 0; }
 }
 
-/*
- * Dot grid — background-size must be co-located with the animation
- * so the drift repeats at exactly the right interval (5 × 32px = 160px).
- */
-.dot-grid {
-  background-image: radial-gradient(circle, rgba(124, 58, 237, 0.18) 1px, transparent 1px);
-  background-size: 32px 32px;
-  animation: dot-drift 22s linear infinite;
+@keyframes slash-shake {
+  10%, 90%      { transform: translateX(-1px); }
+  20%, 80%      { transform: translateX(2px); }
+  30%, 50%, 70% { transform: translateX(-4px); }
+  40%, 60%      { transform: translateX(4px); }
 }
 
-/*
- * Gradient mesh base layer — a large linear gradient at 400% size
- * so that animating background-position pans through visibly distinct
- * purple / blue / navy regions.
- */
-.gradient-mesh {
-  background: linear-gradient(
-    125deg,
-    #0a0a1a 0%,
-    #16063b 18%,
-    #061638 36%,
-    #0a0a1a 50%,
-    #0d0a2e 66%,
-    #060f28 82%,
-    #0a0a1a 100%
-  );
-  background-size: 400% 400%;
-  animation: mesh-shift 20s ease-in-out infinite;
-}
-
-/* ── Wallet adapter button ──────────────────────────────────── */
-
-/*
- * Override the default wallet-adapter styles to match our dark purple UI.
- * The .wallet-nav-btn class is passed as className to WalletMultiButton.
- */
-.wallet-nav-btn.wallet-adapter-button,
-.wallet-nav-btn.wallet-adapter-button-trigger {
-  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
-  background: transparent;
-  border: 1px solid rgba(124, 58, 237, 0.45);
-  color: #a78bfa;
-  border-radius: 8px;
-  height: 36px;
-  padding: 0 16px;
-  line-height: 1;
-  transition: background 0.15s, border-color 0.15s;
-}
-
-.wallet-nav-btn.wallet-adapter-button:hover:not([disabled]),
-.wallet-nav-btn.wallet-adapter-button-trigger:hover:not([disabled]) {
-  background: rgba(124, 58, 237, 0.1);
-  border-color: rgba(124, 58, 237, 0.65);
-}
-
-/* Hide the wallet icon inside the nav button */
-.wallet-nav-btn .wallet-adapter-button-start-icon {
-  display: none;
+@keyframes scan {
+  0%   { background-position: 0 0; }
+  100% { background-position: 0 160px; }
 }
 
 /* ── Base ───────────────────────────────────────────────────── */
 
+* {
+  border-color: var(--ink-line);
+}
+
+html {
+  background: var(--ink);
+  color-scheme: dark;
+}
+
 body {
-  background-color: var(--bg);
-  color: var(--fg);
-  font-family: var(--font-inter), sans-serif;
+  background-color: var(--ink);
+  color: var(--bone);
+  font-family: var(--font-jetbrains-mono), ui-monospace, "SFMono-Regular", monospace;
+  font-feature-settings: "ss01" 1;
+}
+
+::selection {
+  background: var(--amber);
+  color: var(--ink);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--ink);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--ink-line);
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--bone-faint);
+}
+
+/* Fine dot-grid backdrop — reads as instrumentation, not decoration. */
+.terminal-grid {
+  background-image: radial-gradient(circle, rgba(236, 230, 218, 0.06) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.scanlines {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(224, 161, 0, 0.5) 0px,
+    rgba(224, 161, 0, 0) 2px,
+    rgba(224, 161, 0, 0) 160px
+  );
+  background-size: 100% 160px;
+  animation: scan 6s linear infinite;
 }

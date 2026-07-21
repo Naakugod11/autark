@@ -158,6 +158,20 @@ export async function fetchRecentJobs(
     .slice(0, limit);
 }
 
+export async function fetchSlashingPool(
+  program?: Program<Autark>
+): Promise<{ totalSlashed: number; mint: PublicKey; vault: PublicKey } | null> {
+  const p = program ?? getProgram();
+  const all = await p.account.slashingPool.all();
+  if (all.length === 0) return null;
+  const r: any = all[0].account;
+  return {
+    totalSlashed: bn(r.totalSlashed),
+    mint: r.mint,
+    vault: r.vault,
+  };
+}
+
 // ── Events TODO ────────────────────────────────────────────────────────────────
 // sdk/src/events.ts is browser-safe (uses getSignaturesForAddress + connection.onLogs
 // — no fs, no Keypair). But importing it through the SDK entry point (sdk/src/index.ts)

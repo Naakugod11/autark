@@ -12,6 +12,12 @@
   "include": [
     "sdk/src/**/*.ts",
     "seed-devnet.ts",
+    "scripts/smoke-devnet.ts",
+    "scripts/runtime-smoke.ts",
+    "scripts/discovery-probe.ts",
+    "scripts/faucet.ts",
+    "agents/research-agent.ts",
+    "deploy-your-agent.ts",
     "target/types/autark.ts"
   ]
 }
