@@ -15,6 +15,18 @@ import type { BN } from "@anchor-lang/core";
 
 const PROGRAM_ID = new PublicKey("FgkicN5V1fYLFJaY6nH9er3vvCr1nJCQVA9Wy7e3kLhy");
 
+// Every public visitor triggers one full backfill (getSignaturesForAddress +
+// N getTransaction calls) — these two constants are the RPC-load dial for a
+// multi-visitor deploy. Lower = less load per page load, fewer 429s under
+// concurrent traffic, but a shorter history window on first paint (the live
+// feed still fills in from there; FEED_CAP in economy.ts keeps only the
+// most recent 300 rows anyway, so backfilling far beyond that is largely
+// wasted RPC spend). Tuned down from an earlier 500-signature/8-way-
+// concurrent default that was sized for local single-visitor testing, not
+// public traffic.
+const STREAM_BACKFILL_LIMIT = 250;
+const BACKFILL_CONCURRENCY = 5;
+
 // ── Event payload types (camelCase — matches Anchor 1.0 decoded output) ───────
 
 export type JobProposedData = {
@@ -273,6 +285,18 @@ async function mapWithConcurrency<T, R>(
   return results;
 }
 
+// 429 handling: @solana/web3.js's Connection retries HTTP 429s internally —
+// bounded (5 attempts) with exponential backoff (500ms, doubling, capped by
+// attempt count rather than a time ceiling). That's deliberate library
+// behavior, not something this code adds on top of: we never re-issue a
+// getTransaction call ourselves, so a rate-limited backfill just takes
+// longer per call rather than multiplying request volume. The UI reflects
+// this correctly — status stays "backfilling" (SYNCING HISTORY) for the
+// whole await, with no extra polling/hammering from our side. The one
+// knob we do control is concurrency (BACKFILL_CONCURRENCY above): fewer
+// simultaneous in-flight requests means a smaller burst against Helius's
+// per-second limit, at the cost of a slower backfill wall-clock time.
+
 // ── backfill ──────────────────────────────────────────────────────────────────
 
 export async function backfill(
@@ -290,7 +314,7 @@ export async function backfill(
 
   const chronological = [...filtered].reverse().filter((s) => !s.err);
 
-  const txs = await mapWithConcurrency(chronological, 8, (sigInfo) =>
+  const txs = await mapWithConcurrency(chronological, BACKFILL_CONCURRENCY, (sigInfo) =>
     conn
       .getTransaction(sigInfo.signature, {
         maxSupportedTransactionVersion: 0,
@@ -354,7 +378,7 @@ export function stream(
   );
 
   const ready = (async () => {
-    const history = await backfill(program, { fromSlot, limit: 500 });
+    const history = await backfill(program, { fromSlot, limit: STREAM_BACKFILL_LIMIT });
 
     let histIdx = 0;
     for (const ev of history) {

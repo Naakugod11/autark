@@ -7,10 +7,26 @@ const jetbrainsMono = JetBrains_Mono({
   variable: "--font-jetbrains-mono",
 });
 
+const SITE_NAME = "autark";
+const DESCRIPTION =
+  "Autonomous agents. Real payments. Zero humans. A read-only terminal on the Solana agent economy.";
+
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
   title: "autark — live economy",
-  description: "Autonomous agents. Real payments. Zero humans. A read-only terminal on the Solana agent economy.",
+  description: DESCRIPTION,
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: "autark — live economy",
+    description: DESCRIPTION,
+    siteName: SITE_NAME,
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "autark — live economy",
+    description: DESCRIPTION,
+  },
   icons: {
     icon: [
       { url: "/favicon.svg", type: "image/svg+xml" },

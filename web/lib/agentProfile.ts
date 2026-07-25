@@ -17,13 +17,34 @@
  * inside the running subscription. Duplicating the pure headline/state logic
  * here is a few dozen lines; refactoring the proven live pipeline to share it
  * is not worth the risk.
+ *
+ * Caching: every export here is wrapped in unstable_cache (persists across
+ * requests, not just within one) on top of React's cache() (dedupes calls
+ * within one request/render). This matters more than it looks: a profile
+ * page's own render and its opengraph-image are SEPARATE HTTP requests, so
+ * React's cache() alone doesn't stop a shared profile link from costing an
+ * RPC round-trip per social-crawler hit. @solana/web3.js's RPC client is a
+ * plain POST fetch Next.js doesn't auto-cache (fetches default to no-store
+ * since Next 15, and that default isn't overridden by a route's `revalidate`
+ * export the way GET route handlers are — verified empirically: without
+ * unstable_cache here, curling a profile page twice showed no
+ * `x-nextjs-cache` header and `Cache-Control: no-store` both times, i.e. a
+ * fresh fetchAgents()/backfill() call every single request). unstable_cache
+ * is the documented fix for exactly this "non-fetch data source" case.
  */
 
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { getProgram, fetchAgents, type AgentData } from "./autark";
 import { backfill, type AutarkEvent } from "./events";
 import { identityFor, type AgentIdentity } from "./identity";
 import type { FeedRow, FleetAgent } from "./economy";
+
+// Shared revalidate window for both cached exports below — see module doc.
+// Tradeoff: a profile's stats/history/OG card can lag up to this long behind
+// chain state on a cold load. Fine for a shareable snapshot; the live
+// dashboard at "/" is the real-time surface.
+const PROFILE_CACHE_SECONDS = 60;
 
 // ── Ranks ────────────────────────────────────────────────────────────────────
 
@@ -91,7 +112,7 @@ export type AgentAccountProfile = {
   ranks: AgentRanks;
 };
 
-export const getAgentAccount = cache(async (owner: string): Promise<AgentAccountProfile> => {
+async function loadAgentAccount(owner: string): Promise<AgentAccountProfile> {
   const program = getProgram();
   const agents = await fetchAgents(program);
   const match = agents.find((a) => a.owner.toBase58() === owner);
@@ -135,7 +156,11 @@ export const getAgentAccount = cache(async (owner: string): Promise<AgentAccount
     createdAt: match.createdAt,
     ranks,
   };
-});
+}
+
+export const getAgentAccount = cache(
+  unstable_cache(loadAgentAccount, ["agent-account"], { revalidate: PROFILE_CACHE_SECONDS })
+);
 
 // Full fleet, for resolving *other* agents' names inside this agent's history
 // (e.g. who hired them). cache()'d separately so getAgentAccount's own
@@ -296,6 +321,20 @@ export type AgentHistory = {
   truncated: boolean; // true if backfill's signature cap may have cut off older history
 };
 
+// unstable_cache persists its return value through a serialize/deserialize
+// round-trip — a Map survives the *first* (in-process, pre-persist) read but
+// comes back as a plain object missing .get() once served from the
+// persisted copy (confirmed in prod verification: 500s with "b.get is not a
+// function" starting on the 3rd request to the same profile). So the cached
+// loader below returns entries as a plain array, and getAgentHistory
+// rebuilds the real Map on every call — cheap, and keeps every existing
+// caller (HistoryRow, FeedRowItem) working with an actual Map.
+type CachedAgentHistory = {
+  rows: FeedRow[];
+  agentsByOwner: [string, FleetAgent][];
+  truncated: boolean;
+};
+
 function toFleetAgent(a: AgentData): FleetAgent {
   const owner = a.owner.toBase58();
   return {
@@ -314,7 +353,7 @@ function toFleetAgent(a: AgentData): FleetAgent {
   };
 }
 
-export const getAgentHistory = cache(async (owner: string): Promise<AgentHistory> => {
+async function loadAgentHistory(owner: string): Promise<CachedAgentHistory> {
   const program = getProgram();
   const allAgents = await getAllAgents();
   const agentsByOwner = new Map(allAgents.map((a) => [a.owner.toBase58(), toFleetAgent(a)]));
@@ -331,5 +370,18 @@ export const getAgentHistory = cache(async (owner: string): Promise<AgentHistory
   }
   rows.reverse(); // newest first
 
-  return { rows, agentsByOwner, truncated: events.length > 0 && events.length >= SIG_LIMIT * 0.9 };
+  return {
+    rows,
+    agentsByOwner: Array.from(agentsByOwner.entries()),
+    truncated: events.length > 0 && events.length >= SIG_LIMIT * 0.9,
+  };
+}
+
+const getCachedAgentHistory = unstable_cache(loadAgentHistory, ["agent-history"], {
+  revalidate: PROFILE_CACHE_SECONDS,
+});
+
+export const getAgentHistory = cache(async (owner: string): Promise<AgentHistory> => {
+  const cached = await getCachedAgentHistory(owner);
+  return { ...cached, agentsByOwner: new Map(cached.agentsByOwner) };
 });

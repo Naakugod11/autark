@@ -25,12 +25,25 @@ import { Program, AnchorProvider, BN } from "@anchor-lang/core";
 import type { Transaction, VersionedTransaction } from "@solana/web3.js";
 
 // ── Connection ─────────────────────────────────────────────────────────────────
+//
+// No silent fallback to public devnet: a production deploy that forgets to
+// set NEXT_PUBLIC_SOLANA_RPC_URL would otherwise work — just quietly,
+// slowly, and rate-limited for every visitor — which is worse than an
+// obvious failure. If you actually want public devnet, set the env var to
+// https://api.devnet.solana.com explicitly (see web/.env.example).
 
-const RPC_URL =
-  process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? "https://api.devnet.solana.com";
+export function getRpcUrl(): string {
+  const url = process.env.NEXT_PUBLIC_SOLANA_RPC_URL;
+  if (!url) {
+    throw new Error(
+      "NEXT_PUBLIC_SOLANA_RPC_URL is not set — the dashboard has nothing to connect to."
+    );
+  }
+  return url;
+}
 
 export function getConnection(): Connection {
-  return new Connection(RPC_URL, "confirmed");
+  return new Connection(getRpcUrl(), "confirmed");
 }
 
 // ── Read-only Program ──────────────────────────────────────────────────────────

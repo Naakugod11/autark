@@ -102,8 +102,8 @@ export function useEconomy(): EconomyState {
     startedRef.current = true;
     let cancelled = false;
     let unsub: ReturnType<typeof stream> | null = null;
-
-    const program = getProgram();
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    let retryDelay = 5000; // bounded, jittered backoff — resets to 5s on a successful connect
 
     function nameOf(pk: string | undefined): string {
       if (!pk) return "unknown";
@@ -180,11 +180,17 @@ export function useEconomy(): EconomyState {
 
     async function init() {
       try {
+        // getProgram() throws synchronously if NEXT_PUBLIC_SOLANA_RPC_URL is
+        // unset (see autark.ts) — kept inside this try so a missing env var
+        // surfaces through the same "error" status/message path as an
+        // unreachable RPC, instead of an uncaught exception in the effect.
+        const program = getProgram();
         const [agents, pool] = await Promise.all([
           fetchAgents(program),
           fetchSlashingPool(program),
         ]);
         if (cancelled) return;
+        retryDelay = 5000;
 
         for (const a of agents) {
           const owner = a.owner.toBase58();
@@ -428,6 +434,14 @@ export function useEconomy(): EconomyState {
         if (!cancelled) {
           const message = err instanceof Error ? err.message : String(err);
           setState((s) => ({ ...s, status: "error", error: message }));
+          // Bounded, jittered backoff — a transient RPC blip (or the operator
+          // fixing a missing env var) should self-heal without a manual
+          // refresh, but a permanently-broken RPC shouldn't hammer it.
+          const delay = retryDelay + Math.random() * 1000;
+          retryDelay = Math.min(retryDelay * 1.7, 30000);
+          retryTimer = setTimeout(() => {
+            if (!cancelled) init();
+          }, delay);
         }
       }
     }
@@ -436,6 +450,7 @@ export function useEconomy(): EconomyState {
 
     return () => {
       cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
       unsub?.();
     };
   }, []);

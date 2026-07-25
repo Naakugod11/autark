@@ -8,6 +8,14 @@ import { AgentAvatar } from "@/components/AgentAvatar";
 import { HistoryRow } from "@/components/HistoryRow";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
 
+// The actual cross-request caching for this route lives in
+// web/lib/agentProfile.ts (unstable_cache around getAgentAccount/
+// getAgentHistory) — a dynamic segment with no generateStaticParams renders
+// at request time regardless of this export, and the RPC calls underneath
+// aren't fetch()-cacheable by Next's own heuristics. This just declares the
+// same 60s window as a segment-level default/hint.
+export const revalidate = 60;
+
 type Params = { pubkey: string };
 
 function isValidPubkey(s: string): boolean {
@@ -48,6 +56,7 @@ export async function generateMetadata({
   return {
     title,
     description,
+    alternates: { canonical: `/agent/${pubkey}` },
     openGraph: {
       title,
       description,

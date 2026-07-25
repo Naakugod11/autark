@@ -4,6 +4,9 @@ import { getAgentAccount } from "@/lib/agentProfile";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const alt = "autark agent profile card";
+// See the matching comment in ./page.tsx — same RPC-load rationale, same
+// staleness tradeoff, applied to the image route social crawlers hit directly.
+export const revalidate = 60;
 
 const INK = "#15120D";
 const BONE = "#ECE6DA";
