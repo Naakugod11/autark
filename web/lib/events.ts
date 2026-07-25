@@ -250,6 +250,29 @@ export function subscribe(
   };
 }
 
+// Bounded-concurrency map — getTransaction calls are independent reads, so
+// fetching them in parallel (capped, to stay polite to the RPC) cuts a
+// 184-signature backfill from ~75s to a few seconds. Order of `results`
+// matches `items`, so callers can still assemble chronologically.
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let cursor = 0;
+  async function worker() {
+    while (cursor < items.length) {
+      const i = cursor++;
+      results[i] = await fn(items[i]);
+    }
+  }
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, worker)
+  );
+  return results;
+}
+
 // ── backfill ──────────────────────────────────────────────────────────────────
 
 export async function backfill(
@@ -265,26 +288,25 @@ export async function backfill(
   const filtered =
     fromSlot != null ? sigs.filter((s) => (s.slot ?? 0) >= fromSlot) : sigs;
 
-  const chronological = [...filtered].reverse();
+  const chronological = [...filtered].reverse().filter((s) => !s.err);
 
-  const allEvents: AutarkEvent[] = [];
-
-  for (const sigInfo of chronological) {
-    if (sigInfo.err) continue;
-    let tx: Awaited<ReturnType<typeof conn.getTransaction>> = null;
-    try {
-      tx = await conn.getTransaction(sigInfo.signature, {
+  const txs = await mapWithConcurrency(chronological, 8, (sigInfo) =>
+    conn
+      .getTransaction(sigInfo.signature, {
         maxSupportedTransactionVersion: 0,
         commitment: "confirmed",
-      });
-    } catch {
-      continue;
-    }
+      })
+      .catch(() => null)
+  );
+
+  const allEvents: AutarkEvent[] = [];
+  for (let i = 0; i < chronological.length; i++) {
+    const tx = txs[i];
     if (!tx || !tx.meta?.logMessages) continue;
 
     const meta: AutarkEventMeta = {
       slot: tx.slot,
-      signature: sigInfo.signature,
+      signature: chronological[i].signature,
       blockTime: tx.blockTime ?? null,
     };
     const events = parseLogsToEvents(parser, tx.meta.logMessages, meta);

@@ -1,6 +1,7 @@
+import Link from "next/link";
 import { AgentAvatar } from "./AgentAvatar";
 import { identityFor, type AgentIdentity } from "@/lib/identity";
-import { FEED_STATE_STYLE } from "@/lib/feedStyle";
+import { familyStyleOf } from "@/lib/feedStyle";
 import type { FeedRow, FleetAgent } from "@/lib/economy";
 
 function identityOf(pk: string | undefined, agents: Map<string, FleetAgent>): AgentIdentity | null {
@@ -8,8 +9,31 @@ function identityOf(pk: string | undefined, agents: Map<string, FleetAgent>): Ag
   return agents.get(pk)?.identity ?? identityFor(pk);
 }
 
+function AgentLink({
+  pk,
+  identity,
+  size,
+  className,
+  bold,
+  flash,
+}: {
+  pk: string;
+  identity: AgentIdentity;
+  size: number;
+  className: string;
+  bold?: boolean;
+  flash?: "slash";
+}) {
+  return (
+    <Link href={`/agent/${pk}`} className="flex min-w-0 shrink items-center gap-1.5 hover:underline">
+      <AgentAvatar identity={identity} size={size} flash={flash} />
+      <span className={"truncate " + className + (bold ? " font-semibold" : "")}>{identity.name}</span>
+    </Link>
+  );
+}
+
 export function FeedRowItem({ row, agents }: { row: FeedRow; agents: Map<string, FleetAgent> }) {
-  const style = FEED_STATE_STYLE[row.state];
+  const style = familyStyleOf(row.state);
   const isSlash = row.state === "slash";
   const consumerId = identityOf(row.consumer, agents);
   const providerId = identityOf(row.provider, agents);
@@ -18,10 +42,12 @@ export function FeedRowItem({ row, agents }: { row: FeedRow; agents: Map<string,
   return (
     <div
       className={
-        "animate-slide-in flex items-center gap-3 border-b border-ink-line px-3 py-2 " +
-        (isSlash
-          ? "animate-slash-shake bg-danger-dim/50 " + (style.glow ?? "")
-          : "hover:bg-ink/60")
+        "animate-slide-in flex items-center gap-3 border-b border-ink-line border-l-2 px-3 py-2 " +
+        style.accent +
+        " " +
+        style.wash +
+        " " +
+        (isSlash ? "animate-slash-shake border-l-4 " + (style.glow ?? "") : "hover:bg-ink/60")
       }
     >
       <span className={"h-1.5 w-1.5 shrink-0 rounded-full " + style.dot} />
@@ -30,24 +56,27 @@ export function FeedRowItem({ row, agents }: { row: FeedRow; agents: Map<string,
       </span>
 
       <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden text-[12px] whitespace-nowrap">
-        {consumerId && providerId ? (
+        {consumerId && providerId && row.consumer && row.provider ? (
           <>
-            <AgentAvatar identity={consumerId} size={18} />
-            <span className="truncate text-bone-dim">{consumerId.name}</span>
-            <span className="text-bone-faint">→</span>
+            <AgentLink pk={row.consumer} identity={consumerId} size={18} className={style.dim} />
+            <span className="shrink-0 text-bone-faint">→</span>
             {row.amount != null && (
-              <span className={"font-semibold " + (isSlash ? "text-danger" : "text-amber")}>
+              <span className={"shrink-0 font-semibold " + style.amount}>
                 {(row.amount / 1e6).toFixed(2)} USDC
               </span>
             )}
-            <span className="text-bone-faint">→</span>
-            <AgentAvatar identity={providerId} size={18} flash={isSlash ? "slash" : undefined} />
-            <span className={"truncate " + (isSlash ? "font-semibold text-danger" : "text-bone")}>
-              {providerId.name}
-            </span>
+            <span className="shrink-0 text-bone-faint">→</span>
+            <AgentLink
+              pk={row.provider}
+              identity={providerId}
+              size={18}
+              className={style.text}
+              bold={isSlash}
+              flash={isSlash ? "slash" : undefined}
+            />
           </>
         ) : (
-          <span className={"truncate " + (isSlash ? "font-semibold text-danger" : "text-bone")}>
+          <span className={"truncate " + style.text + (isSlash ? " font-semibold" : "")}>
             {row.headline}
           </span>
         )}
@@ -56,12 +85,12 @@ export function FeedRowItem({ row, agents }: { row: FeedRow; agents: Map<string,
       <span
         className={
           "shrink-0 rounded-sm border px-1.5 py-0.5 text-[9px] tracking-[0.14em] " +
-          style.text +
+          style.badgeText +
           " " +
-          style.border
+          style.badgeBorder
         }
       >
-        {style.label}
+        {row.badge}
       </span>
     </div>
   );

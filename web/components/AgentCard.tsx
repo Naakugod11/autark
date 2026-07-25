@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { AgentAvatar } from "./AgentAvatar";
 import type { FleetAgent } from "@/lib/economy";
 
@@ -34,9 +35,10 @@ export function AgentCard({ agent }: { agent: FleetAgent }) {
   const active = agent.openJobs > 0;
 
   return (
-    <div
+    <Link
+      href={`/agent/${agent.owner}`}
       className={
-        "border-b border-ink-line px-3 py-2.5 transition-colors duration-500" +
+        "block border-b border-ink-line px-3 py-2.5 transition-colors duration-500 hover:bg-ink/60" +
         (flash === "slash" ? " animate-slash-shake bg-danger-dim/40" : "") +
         (flash === "settle" ? " bg-amber-dim/15" : "")
       }
@@ -74,7 +76,7 @@ export function AgentCard({ agent }: { agent: FleetAgent }) {
       <div className="mt-1.5 text-[9px] text-bone-faint">
         stake ${fmt(agent.stakeAmount)} · {agent.owner.slice(0, 4)}…{agent.owner.slice(-4)}
       </div>
-    </div>
+    </Link>
   );
 }
 

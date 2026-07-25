@@ -9,7 +9,8 @@
   --bone-faint: #6b6656;
   --amber: #e0a100;
   --amber-dim: #7a5c14;
-  --warn: #d97706;
+  --warn: #e2661a;
+  --warn-dim: #6b350f;
   --danger: #e2373a;
   --danger-dim: #5c1f1f;
 }
@@ -24,6 +25,7 @@
   --color-amber: var(--amber);
   --color-amber-dim: var(--amber-dim);
   --color-warn: var(--warn);
+  --color-warn-dim: var(--warn-dim);
   --color-danger: var(--danger);
   --color-danger-dim: var(--danger-dim);
   --font-mono: var(--font-jetbrains-mono);

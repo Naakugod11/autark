@@ -15,9 +15,14 @@ export function TopBar({ status }: { status: ConnStatus }) {
         </div>
       </div>
       <div className="flex items-center gap-3">
-        <span className="hidden text-[10px] tracking-[0.15em] text-bone-faint md:inline">
-          PROGRAM FgkicN5…3kLhy
-        </span>
+        <a
+          href="https://explorer.solana.com/address/FgkicN5V1fYLFJaY6nH9er3vvCr1nJCQVA9Wy7e3kLhy?cluster=devnet"
+          target="_blank"
+          rel="noreferrer"
+          className="hidden text-[10px] tracking-[0.15em] text-bone-faint hover:text-bone-dim hover:underline md:inline"
+        >
+          PROGRAM FgkicN5…3kLhy ↗
+        </a>
         <StatusPill status={status} />
       </div>
     </header>

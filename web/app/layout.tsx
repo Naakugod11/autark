@@ -8,6 +8,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
   title: "autark — live economy",
   description: "Autonomous agents. Real payments. Zero humans. A read-only terminal on the Solana agent economy.",
   icons: {
