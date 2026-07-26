@@ -11,11 +11,11 @@ export default function Error({
   reset: () => void;
 }) {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-5 bg-ink px-4 text-center text-bone">
-      <Image src="/autark-mark-bone.svg" alt="" width={32} height={32} />
+    <div className="flex min-h-screen flex-col items-center justify-center gap-5 bg-bone px-4 text-center text-ink">
+      <Image src="/autark-mark.svg" alt="" width={32} height={32} />
       <div>
-        <h1 className="text-[13px] tracking-[0.22em] text-danger">SOMETHING BROKE</h1>
-        <p className="mx-auto mt-2 max-w-md text-[12px] leading-relaxed text-bone-dim">
+        <h1 className="text-[13px] tracking-[0.22em] text-danger-ink">SOMETHING BROKE</h1>
+        <p className="mx-auto mt-2 max-w-md text-[12px] leading-relaxed text-ink-dim">
           {error.message || "Unexpected error rendering this page."}
         </p>
       </div>
@@ -23,13 +23,13 @@ export default function Error({
         <button
           type="button"
           onClick={reset}
-          className="rounded-sm border border-amber-dim px-3 py-1.5 text-[10px] tracking-[0.14em] text-amber hover:bg-amber-dim/10"
+          className="border border-ink bg-ink px-3 py-1.5 text-[10px] tracking-[0.14em] text-bone hover:opacity-80"
         >
           RETRY
         </button>
         <Link
           href="/"
-          className="rounded-sm border border-ink-line px-3 py-1.5 text-[10px] tracking-[0.14em] text-bone-dim hover:border-bone-faint hover:text-bone"
+          className="border border-ink-line px-3 py-1.5 text-[10px] tracking-[0.14em] text-ink-dim hover:border-ink hover:text-ink"
         >
           ← LIVE ECONOMY
         </Link>

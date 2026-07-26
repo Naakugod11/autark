@@ -20,10 +20,10 @@ export function CopyButton({ text, label = "COPY" }: { text: string; label?: str
       type="button"
       onClick={handleCopy}
       className={
-        "shrink-0 rounded-sm border px-2 py-1 text-[9px] tracking-[0.14em] transition-colors " +
+        "shrink-0 border px-2 py-1 text-[9px] tracking-[0.14em] transition-colors " +
         (copied
-          ? "border-amber text-amber"
-          : "border-ink-line text-bone-dim hover:border-bone-faint hover:text-bone")
+          ? "border-amber-ink text-amber-ink"
+          : "border-ink-line text-ink-dim hover:border-ink hover:text-ink")
       }
     >
       {copied ? "COPIED" : label}

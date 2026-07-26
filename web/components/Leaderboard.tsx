@@ -88,17 +88,17 @@ export function Leaderboard({ agents }: { agents: FleetAgent[] }) {
   return (
     <div className="flex flex-col">
       <div className="flex items-center justify-between px-3 py-2">
-        <h3 className="text-[10px] tracking-[0.2em] text-bone-faint">LEADERBOARD</h3>
+        <h3 className="text-[10px] tracking-[0.2em] text-ink-faint">LEADERBOARD</h3>
         <div className="flex flex-wrap justify-end gap-1">
           {MODES.map((m) => (
             <button
               key={m.key}
               onClick={() => setMode(m.key)}
               className={
-                "rounded-sm border px-1.5 py-0.5 text-[9px] tracking-[0.1em] " +
+                "border px-1.5 py-0.5 text-[9px] tracking-[0.1em] " +
                 (mode === m.key
-                  ? "border-amber-dim text-amber"
-                  : "border-ink-line text-bone-faint hover:text-bone-dim")
+                  ? "border-ink bg-ink text-bone"
+                  : "border-ink-line text-ink-faint hover:text-ink")
               }
             >
               {m.label}
@@ -108,7 +108,7 @@ export function Leaderboard({ agents }: { agents: FleetAgent[] }) {
       </div>
       <div>
         {ranked.length === 0 && (
-          <div className="px-3 pb-3 text-[11px] text-bone-faint">no agents yet</div>
+          <div className="px-3 pb-3 text-[11px] text-ink-faint">no agents yet</div>
         )}
         {ranked.map((a, i) => {
           const direction = moved.get(a.owner);
@@ -116,25 +116,25 @@ export function Leaderboard({ agents }: { agents: FleetAgent[] }) {
             <Link
               href={`/agent/${a.owner}`}
               key={a.owner}
-              className="flex items-center gap-2 border-t border-ink-line px-3 py-1.5 hover:bg-ink/60"
+              className="flex items-center gap-2 border-t border-ink-line px-3 py-1.5 hover:bg-ink/[0.03]"
             >
-              <span className="flex w-7 shrink-0 items-center gap-0.5 text-[10px] tabular-nums text-bone-faint">
+              <span className="flex w-7 shrink-0 items-center gap-0.5 text-[10px] tabular-nums text-ink-faint">
                 {i + 1}
                 {direction && (
-                  <span className={direction === "up" ? "text-amber" : "text-warn"}>
+                  <span className={direction === "up" ? "text-ink" : "text-warn-ink"}>
                     {direction === "up" ? "▲" : "▼"}
                   </span>
                 )}
               </span>
               <AgentAvatar identity={a.identity} size={20} />
-              <span className="min-w-0 flex-1 truncate text-[11px] text-bone">{a.identity.name}</span>
+              <span className="min-w-0 flex-1 truncate text-[11px] text-ink">{a.identity.name}</span>
               {mode === "volume" && (
-                <span className="shrink-0 text-[11px] font-semibold tabular-nums text-amber">
+                <span className="shrink-0 text-[11px] font-semibold tabular-nums text-amber-ink">
                   ${(a.scoreVolume / 1e6).toFixed(2)}
                 </span>
               )}
               {mode === "jobs" && (
-                <span className="shrink-0 text-[11px] font-semibold tabular-nums text-bone">
+                <span className="shrink-0 text-[11px] font-semibold tabular-nums text-ink">
                   {a.scoreCompleted}
                 </span>
               )}
@@ -142,7 +142,7 @@ export function Leaderboard({ agents }: { agents: FleetAgent[] }) {
                 <span
                   className={
                     "shrink-0 text-[11px] font-semibold tabular-nums " +
-                    (a.slashEvents === 0 ? "text-amber" : "text-bone-dim")
+                    (a.slashEvents === 0 ? "text-ink" : "text-ink-faint")
                   }
                 >
                   {Math.round(cleanScore(a) * 100)}%
@@ -152,7 +152,7 @@ export function Leaderboard({ agents }: { agents: FleetAgent[] }) {
                 <span
                   className={
                     "shrink-0 text-[11px] font-semibold tabular-nums " +
-                    (a.slashEvents > 0 ? "text-danger" : "text-bone-faint")
+                    (a.slashEvents > 0 ? "text-danger-ink" : "text-ink-faint")
                   }
                 >
                   {a.slashEvents} slash{a.slashEvents === 1 ? "" : "es"}

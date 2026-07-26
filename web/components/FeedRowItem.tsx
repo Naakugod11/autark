@@ -42,16 +42,13 @@ export function FeedRowItem({ row, agents }: { row: FeedRow; agents: Map<string,
   return (
     <div
       className={
-        "animate-slide-in flex items-center gap-3 border-b border-ink-line border-l-2 px-3 py-2 " +
-        style.accent +
-        " " +
-        style.wash +
-        " " +
-        (isSlash ? "animate-slash-shake border-l-4 " + (style.glow ?? "") : "hover:bg-ink/60")
+        "animate-slide-in flex items-center gap-2.5 border-b border-ink-line px-3 py-2 " +
+        style.ruleWidth + " " + style.accent + " " + style.wash + " " +
+        (isSlash ? "animate-slash-shake" : "hover:bg-ink/[0.03]")
       }
     >
-      <span className={"h-1.5 w-1.5 shrink-0 rounded-full " + style.dot} />
-      <span className="hidden w-[68px] shrink-0 text-[10px] tabular-nums text-bone-faint sm:inline">
+      <span className={"w-3 shrink-0 text-center text-[11px] leading-none " + style.glyphColor}>{style.glyph}</span>
+      <span className={"hidden w-[68px] shrink-0 text-[10px] tabular-nums sm:inline " + style.dim}>
         {time}
       </span>
 
@@ -59,13 +56,13 @@ export function FeedRowItem({ row, agents }: { row: FeedRow; agents: Map<string,
         {consumerId && providerId && row.consumer && row.provider ? (
           <>
             <AgentLink pk={row.consumer} identity={consumerId} size={18} className={style.dim} />
-            <span className="shrink-0 text-bone-faint">→</span>
+            <span className={"shrink-0 " + style.dim}>→</span>
             {row.amount != null && (
               <span className={"shrink-0 font-semibold " + style.amount}>
                 {(row.amount / 1e6).toFixed(2)} USDC
               </span>
             )}
-            <span className="shrink-0 text-bone-faint">→</span>
+            <span className={"shrink-0 " + style.dim}>→</span>
             <AgentLink
               pk={row.provider}
               identity={providerId}
@@ -84,10 +81,8 @@ export function FeedRowItem({ row, agents }: { row: FeedRow; agents: Map<string,
 
       <span
         className={
-          "shrink-0 rounded-sm border px-1.5 py-0.5 text-[9px] tracking-[0.14em] " +
-          style.badgeText +
-          " " +
-          style.badgeBorder
+          "shrink-0 border px-1.5 py-0.5 text-[9px] font-semibold tracking-[0.14em] " +
+          style.badgeText + " " + style.badgeBorder + " " + style.badgeFill
         }
       >
         {row.badge}

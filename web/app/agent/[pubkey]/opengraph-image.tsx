@@ -8,12 +8,12 @@ export const alt = "autark agent profile card";
 // staleness tradeoff, applied to the image route social crawlers hit directly.
 export const revalidate = 60;
 
+const BONE = "#F2EEE6";
 const INK = "#15120D";
-const BONE = "#ECE6DA";
-const BONE_FAINT = "#6b6656";
-const AMBER = "#E0A100";
-const DANGER = "#E2373A";
-const LINE = "#2a251c";
+const INK_FAINT = "#6b6656";
+const AMBER_INK = "#7A5C14"; // amber deep enough to read as text on bone — money only
+const DANGER_INK = "#8F1D24"; // slash count only
+const LINE = "#C4B9A0";
 
 // Best-effort brand font — satori needs an explicit font file for any
 // non-default family. If the fetch fails (offline build, blocked network),
@@ -42,7 +42,7 @@ export default async function Image({ params }: { params: Promise<{ pubkey: stri
 
   const total = profile.scoreCompleted + profile.scoreFailed;
   const clean = total === 0 ? 100 : Math.round((profile.scoreCompleted / total) * 100);
-  const slashColor = profile.slashEvents > 0 ? DANGER : AMBER;
+  const slashColor = profile.slashEvents > 0 ? DANGER_INK : INK;
 
   const sampleText = `autark ${profile.identity.name} #${profile.ranks.volume.rank} $${fmt(profile.scoreVolume)} ${profile.slashEvents} ${clean}% LIVE SOLANA DEVNET AGENT ECONOMY TERMINAL RANK OF SLASHES EARNED CLEAN 0123456789`;
   const fontData = await loadMonoFont(sampleText);
@@ -55,39 +55,39 @@ export default async function Image({ params }: { params: Promise<{ pubkey: stri
           height: "100%",
           display: "flex",
           flexDirection: "column",
-          backgroundColor: INK,
+          backgroundColor: BONE,
           padding: 64,
           fontFamily: fontData ? "JetBrains Mono" : undefined,
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div style={{ width: 16, height: 16, borderRadius: 999, background: AMBER, display: "flex" }} />
-          <div style={{ fontSize: 26, color: BONE, letterSpacing: 3 }}>autark</div>
+          <div style={{ width: 16, height: 16, background: INK, display: "flex" }} />
+          <div style={{ fontSize: 26, color: INK, letterSpacing: 3 }}>autark</div>
         </div>
 
         <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-          <div style={{ fontSize: 76, fontWeight: 700, color: BONE, display: "flex" }}>
+          <div style={{ fontSize: 76, fontWeight: 700, color: INK, display: "flex" }}>
             {profile.identity.name}
           </div>
           <div style={{ display: "flex", gap: 20, marginTop: 40 }}>
             {profile.found ? (
               <>
-                <StatBox label={`RANK OF ${profile.ranks.volume.total}`} value={`#${profile.ranks.volume.rank}`} color={BONE} />
-                <StatBox label="EARNED" value={`$${fmt(profile.scoreVolume)}`} color={AMBER} />
+                <StatBox label={`RANK OF ${profile.ranks.volume.total}`} value={`#${profile.ranks.volume.rank}`} color={INK} />
+                <StatBox label="EARNED" value={`$${fmt(profile.scoreVolume)}`} color={AMBER_INK} />
                 <StatBox
                   label={profile.slashEvents === 1 ? "SLASH" : "SLASHES"}
                   value={String(profile.slashEvents)}
                   color={slashColor}
                 />
-                <StatBox label="CLEAN RECORD" value={`${clean}%`} color={profile.slashEvents === 0 ? AMBER : BONE} />
+                <StatBox label="CLEAN RECORD" value={`${clean}%`} color={INK} />
               </>
             ) : (
-              <StatBox label="STATUS" value="UNREGISTERED" color={BONE_FAINT} />
+              <StatBox label="STATUS" value="UNREGISTERED" color={INK_FAINT} />
             )}
           </div>
         </div>
 
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 18, color: BONE_FAINT }}>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 18, color: INK_FAINT }}>
           <div style={{ display: "flex" }}>LIVE · SOLANA DEVNET</div>
           <div style={{ display: "flex" }}>AGENT ECONOMY TERMINAL</div>
         </div>
@@ -112,7 +112,7 @@ function StatBox({ label, value, color }: { label: string; value: string; color:
       }}
     >
       <div style={{ fontSize: 40, fontWeight: 700, color, display: "flex" }}>{value}</div>
-      <div style={{ fontSize: 15, color: BONE_FAINT, letterSpacing: 2, marginTop: 6, display: "flex" }}>
+      <div style={{ fontSize: 15, color: INK_FAINT, letterSpacing: 2, marginTop: 6, display: "flex" }}>
         {label}
       </div>
     </div>

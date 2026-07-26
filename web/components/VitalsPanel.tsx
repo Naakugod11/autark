@@ -37,7 +37,7 @@ export function VitalsPanel({
   const activeAgents = agents.filter((a) => a.openJobs > 0).length;
 
   return (
-    <Panel title="NETWORK VITALS" className="h-full" bodyClassName="flex flex-col overflow-hidden">
+    <Panel title="NETWORK VITALS" className="xl:h-full" bodyClassName="flex flex-col xl:overflow-hidden">
       <div className="grid grid-cols-2 gap-1.5 p-2">
         <StatTile label="ACTIVE AGENTS" value={String(activeAgents)} />
         <StatTile label="EVENTS / 5M" value={String(eventsLast5Min)} />
@@ -49,7 +49,7 @@ export function VitalsPanel({
           flash={slashFlash}
         />
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto border-t border-ink-line">
+      <div className="xl:min-h-0 xl:flex-1 xl:overflow-y-auto border-t border-ink-line">
         <Leaderboard agents={agents} />
       </div>
     </Panel>

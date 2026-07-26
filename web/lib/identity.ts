@@ -9,7 +9,11 @@
  */
 
 // owner pubkey (base58) -> display name. Extend as real agents are deployed.
-const KNOWN_AGENTS: Record<string, string> = {};
+const KNOWN_AGENTS: Record<string, string> = {
+  // The RUN DEMO button's fixed provider (scripts/setup-demo-agent.ts) —
+  // named so visitors can find it and watch its slash count climb.
+  "5724MfZvQj4G3bzoPVs2ggjvCQqdNenaDU3AZPw5Zgiy": "demo-agent",
+};
 
 const NAME_WORDS = [
   "sentinel", "cipher", "vector", "quanta", "signal", "oracle", "raster",

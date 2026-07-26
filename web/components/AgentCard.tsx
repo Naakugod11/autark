@@ -38,26 +38,26 @@ export function AgentCard({ agent }: { agent: FleetAgent }) {
     <Link
       href={`/agent/${agent.owner}`}
       className={
-        "block border-b border-ink-line px-3 py-2.5 transition-colors duration-500 hover:bg-ink/60" +
-        (flash === "slash" ? " animate-slash-shake bg-danger-dim/40" : "") +
-        (flash === "settle" ? " bg-amber-dim/15" : "")
+        "block border-b border-ink-line px-3 py-2.5 transition-colors duration-500 hover:bg-ink/[0.03]" +
+        (flash === "slash" ? " animate-slash-shake bg-danger-wash" : "") +
+        (flash === "settle" ? " bg-amber-wash" : "")
       }
     >
       <div className="flex items-center gap-2.5">
         <AgentAvatar identity={agent.identity} size={30} flash={flash} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
-            <span className="truncate text-[12px] text-bone">{agent.identity.name}</span>
+            <span className="truncate text-[12px] text-ink">{agent.identity.name}</span>
             <span
               className={
-                "shrink-0 rounded-sm border px-1.5 py-0.5 text-[9px] tracking-[0.12em] " +
-                (active ? "border-amber-dim text-amber" : "border-ink-line text-bone-faint")
+                "shrink-0 border px-1.5 py-0.5 text-[9px] tracking-[0.12em] " +
+                (active ? "border-ink bg-ink text-bone" : "border-ink-line text-ink-faint")
               }
             >
               {active ? `ACTIVE·${agent.openJobs}` : "IDLE"}
             </span>
           </div>
-          <div className="mt-0.5 truncate text-[10px] text-bone-faint">
+          <div className="mt-0.5 truncate text-[10px] text-ink-faint">
             {agent.capabilities.length > 0 ? agent.capabilities.join(", ") : "no capabilities listed"}
           </div>
         </div>
@@ -73,7 +73,7 @@ export function AgentCard({ agent }: { agent: FleetAgent }) {
           danger={agent.slashEvents > 0}
         />
       </div>
-      <div className="mt-1.5 text-[9px] text-bone-faint">
+      <div className="mt-1.5 text-[9px] text-ink-faint">
         stake ${fmt(agent.stakeAmount)} · {agent.owner.slice(0, 4)}…{agent.owner.slice(-4)}
       </div>
     </Link>
@@ -94,16 +94,16 @@ function Stat({
   danger?: boolean;
 }) {
   return (
-    <div className="rounded-sm bg-ink px-1 py-1">
+    <div className="border border-ink-line bg-bone px-1 py-1">
       <div
         className={
           "text-[11px] font-semibold tabular-nums " +
-          (danger ? "text-danger" : warn ? "text-warn" : accent ? "text-amber" : "text-bone")
+          (danger ? "text-danger-ink" : warn ? "text-warn-ink" : accent ? "text-amber-ink" : "text-ink")
         }
       >
         {value}
       </div>
-      <div className="text-[8px] tracking-[0.14em] text-bone-faint">{label}</div>
+      <div className="text-[8px] tracking-[0.14em] text-ink-faint">{label}</div>
     </div>
   );
 }

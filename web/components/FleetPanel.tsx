@@ -18,21 +18,21 @@ export function FleetPanel({ agents }: { agents: FleetAgent[] }) {
     <>
       <Panel
         title={`FLEET · ${agents.length}`}
-        className="h-full"
-        bodyClassName="flex flex-col overflow-hidden"
+        className="xl:h-full"
+        bodyClassName="flex flex-col xl:overflow-hidden"
         right={
           <button
             type="button"
             onClick={() => setDeployOpen(true)}
-            className="rounded-sm border border-amber-dim px-2 py-1 text-[9px] tracking-[0.14em] text-amber hover:bg-amber-dim/10"
+            className="border border-ink bg-ink px-2 py-1 text-[9px] tracking-[0.14em] text-bone hover:opacity-80"
           >
             + DEPLOY AGENT
           </button>
         }
       >
-        <div className="flex-1 overflow-y-auto">
+        <div className="xl:flex-1 xl:overflow-y-auto">
           {sorted.length === 0 && (
-            <div className="px-3 py-6 text-center text-[11px] text-bone-faint">
+            <div className="px-3 py-6 text-center text-[11px] text-ink-faint">
               no agents registered yet
             </div>
           )}

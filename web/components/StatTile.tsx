@@ -14,19 +14,19 @@ export function StatTile({
   return (
     <div
       className={
-        "border border-ink-line bg-ink px-3 py-2.5 transition-colors duration-700" +
-        (flash ? " bg-danger-dim/40 border-danger" : "")
+        "border px-3 py-2.5 transition-colors duration-700 " +
+        (flash ? "border-danger bg-danger-wash" : "border-ink-line bg-bone")
       }
     >
       <div
         className={
           "text-[19px] font-semibold tabular-nums " +
-          (danger ? "text-danger" : accent ? "text-amber" : "text-bone")
+          (danger ? "text-danger-ink" : accent ? "text-amber-ink" : "text-ink")
         }
       >
         {value}
       </div>
-      <div className="mt-0.5 text-[9px] tracking-[0.16em] text-bone-faint">{label}</div>
+      <div className="mt-0.5 text-[9px] tracking-[0.16em] text-ink-faint">{label}</div>
     </div>
   );
 }

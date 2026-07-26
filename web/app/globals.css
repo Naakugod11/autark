@@ -1,68 +1,83 @@
 @import "tailwindcss";
 
+/*
+ * Light system — printed broadsheet / paper trading terminal, not dark-mode
+ * crypto glow. Bone is the dominant surface everywhere; ink is text, rules,
+ * and structure; amber is spent sparingly (money, accents, the settled
+ * state's quiet win). See feedStyle.ts for the full state-color system this
+ * feeds — text/fill pairs below are chosen so every accent color is usable
+ * BOTH as a small fill (with ink or bone on top) and, in a deeper form, as
+ * text directly on bone, at real WCAG contrast (verified, not eyeballed):
+ *
+ *   ink on bone            16.1:1
+ *   amber-ink on bone       5.4:1   (amber (#e0a100) on bone is only 2.0:1 —
+ *   danger-ink on bone      7.7:1    too low for text; amber/danger/warn stay
+ *   warn-ink on bone        6.4:1    fills+accents only, never body text)
+ *   ink on amber            8.2:1   (badge/pill fills: ink text on a bright
+ *   bone on ink            16.1:1    amber or bone-on-ink fill both hold up)
+ */
+
 :root {
+  --bone: #f2eee6;
   --ink: #15120d;
-  --ink-raised: #1c1811;
-  --ink-line: #2a251c;
-  --bone: #ece6da;
-  --bone-dim: #a49c88;
-  --bone-faint: #6b6656;
+  --ink-dim: #4a4638;
+  --ink-faint: #6b6656;
+  --ink-line: #c4b9a0;
+
   --amber: #e0a100;
-  --amber-dim: #7a5c14;
-  --warn: #e2661a;
-  --warn-dim: #6b350f;
+  --amber-ink: #7a5c14;
+  --amber-wash: #f7edd2;
+
   --danger: #e2373a;
-  --danger-dim: #5c1f1f;
+  --danger-ink: #8f1d24;
+  --danger-wash: #f7d9d4;
+
+  --warn: #e2661a;
+  --warn-ink: #8f3c0d;
+  --warn-wash: #f5e2ce;
 }
 
 @theme inline {
-  --color-ink: var(--ink);
-  --color-ink-raised: var(--ink-raised);
-  --color-ink-line: var(--ink-line);
   --color-bone: var(--bone);
-  --color-bone-dim: var(--bone-dim);
-  --color-bone-faint: var(--bone-faint);
+  --color-ink: var(--ink);
+  --color-ink-dim: var(--ink-dim);
+  --color-ink-faint: var(--ink-faint);
+  --color-ink-line: var(--ink-line);
+
   --color-amber: var(--amber);
-  --color-amber-dim: var(--amber-dim);
-  --color-warn: var(--warn);
-  --color-warn-dim: var(--warn-dim);
+  --color-amber-ink: var(--amber-ink);
+  --color-amber-wash: var(--amber-wash);
+
   --color-danger: var(--danger);
-  --color-danger-dim: var(--danger-dim);
+  --color-danger-ink: var(--danger-ink);
+  --color-danger-wash: var(--danger-wash);
+
+  --color-warn: var(--warn);
+  --color-warn-ink: var(--warn-ink);
+  --color-warn-wash: var(--warn-wash);
+
   --font-mono: var(--font-jetbrains-mono);
 
   --animate-slide-in: slide-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
   --animate-pulse-dot: pulse-dot 1.8s ease-in-out infinite;
-  --animate-slash-flash: slash-flash 0.9s ease-out;
   --animate-slash-shake: slash-shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
-  --animate-scan: scan 6s linear infinite;
 }
 
 @keyframes slide-in {
-  from { opacity: 0; transform: translateY(-6px); }
+  from { opacity: 0; transform: translateY(-4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes pulse-dot {
-  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(224, 161, 0, 0.5); }
-  50%      { opacity: 0.55; box-shadow: 0 0 0 5px rgba(224, 161, 0, 0); }
-}
-
-@keyframes slash-flash {
-  0%   { opacity: 0; }
-  12%  { opacity: 1; }
-  100% { opacity: 0; }
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.4; }
 }
 
 @keyframes slash-shake {
   10%, 90%      { transform: translateX(-1px); }
   20%, 80%      { transform: translateX(2px); }
-  30%, 50%, 70% { transform: translateX(-4px); }
-  40%, 60%      { transform: translateX(4px); }
-}
-
-@keyframes scan {
-  0%   { background-position: 0 0; }
-  100% { background-position: 0 160px; }
+  30%, 50%, 70% { transform: translateX(-3px); }
+  40%, 60%      { transform: translateX(3px); }
 }
 
 /* ── Base ───────────────────────────────────────────────────── */
@@ -72,20 +87,21 @@
 }
 
 html {
-  background: var(--ink);
-  color-scheme: dark;
+  background: var(--bone);
+  color-scheme: light;
 }
 
 body {
-  background-color: var(--ink);
-  color: var(--bone);
+  background-color: var(--bone);
+  color: var(--ink);
   font-family: var(--font-jetbrains-mono), ui-monospace, "SFMono-Regular", monospace;
   font-feature-settings: "ss01" 1;
+  font-variant-numeric: tabular-nums;
 }
 
 ::selection {
-  background: var(--amber);
-  color: var(--ink);
+  background: var(--ink);
+  color: var(--bone);
 }
 
 ::-webkit-scrollbar {
@@ -93,30 +109,19 @@ body {
   height: 10px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--ink);
+  background: var(--bone);
 }
 ::-webkit-scrollbar-thumb {
   background: var(--ink-line);
-  border: 2px solid var(--ink);
+  border: 2px solid var(--bone);
   border-radius: 6px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--bone-faint);
+  background: var(--ink-faint);
 }
 
 /* Fine dot-grid backdrop — reads as instrumentation, not decoration. */
 .terminal-grid {
-  background-image: radial-gradient(circle, rgba(236, 230, 218, 0.06) 1px, transparent 1px);
+  background-image: radial-gradient(circle, rgba(21, 18, 13, 0.05) 1px, transparent 1px);
   background-size: 24px 24px;
-}
-
-.scanlines {
-  background-image: repeating-linear-gradient(
-    to bottom,
-    rgba(224, 161, 0, 0.5) 0px,
-    rgba(224, 161, 0, 0) 2px,
-    rgba(224, 161, 0, 0) 160px
-  );
-  background-size: 100% 160px;
-  animation: scan 6s linear infinite;
 }

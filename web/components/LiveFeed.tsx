@@ -50,10 +50,10 @@ export function LiveFeed({
   return (
     <Panel
       title="LIVE ECONOMY"
-      className="h-full"
-      bodyClassName="flex flex-col overflow-hidden"
+      className="xl:h-full"
+      bodyClassName="flex flex-col xl:overflow-hidden"
       right={
-        <span className="text-[9px] tracking-[0.14em] text-bone-faint">
+        <span className="text-[9px] tracking-[0.14em] text-ink-faint">
           {eventsLast5Min} EVENTS / 5M
         </span>
       }
@@ -66,10 +66,10 @@ export function LiveFeed({
               type="button"
               onClick={() => setFamily(f.key)}
               className={
-                "rounded-sm border px-1.5 py-0.5 text-[9px] tracking-[0.1em] transition-colors " +
+                "border px-1.5 py-0.5 text-[9px] tracking-[0.1em] transition-colors " +
                 (family === f.key
-                  ? "border-amber-dim text-amber"
-                  : "border-ink-line text-bone-faint hover:text-bone-dim")
+                  ? "border-ink bg-ink text-bone"
+                  : "border-ink-line text-ink-faint hover:text-ink")
               }
             >
               {f.label}
@@ -79,7 +79,7 @@ export function LiveFeed({
         <select
           value={agentFilter}
           onChange={(e) => setAgentFilter(e.target.value)}
-          className="ml-auto rounded-sm border border-ink-line bg-ink px-1.5 py-0.5 text-[9px] tracking-[0.1em] text-bone-dim outline-none"
+          className="ml-auto border border-ink-line bg-bone px-1.5 py-0.5 text-[9px] tracking-[0.1em] text-ink-dim outline-none"
         >
           <option value="all">ALL AGENTS</option>
           {agentOptions.map(([pk, name]) => (
@@ -90,9 +90,9 @@ export function LiveFeed({
         </select>
       </div>
 
-      <div className="terminal-grid flex-1 overflow-y-auto">
+      <div className="terminal-grid xl:flex-1 xl:overflow-y-auto">
         {filtered.length === 0 && (
-          <div className="px-3 py-10 text-center text-[11px] text-bone-faint">
+          <div className="px-3 py-10 text-center text-[11px] text-ink-faint">
             {feed.length === 0 ? "waiting for on-chain activity…" : "no rows match this filter"}
           </div>
         )}

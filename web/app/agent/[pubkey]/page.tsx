@@ -88,18 +88,18 @@ export default async function AgentProfilePage({
   const visibleRows = history.rows.slice(0, 60);
 
   return (
-    <div className="min-h-screen bg-ink text-bone">
-      <header className="flex items-center justify-between border-b border-ink-line px-4 py-3 sm:px-6">
+    <div className="min-h-screen bg-bone text-ink">
+      <header className="flex items-center justify-between border-b border-ink px-4 py-3 sm:px-6">
         <Link href="/" className="flex items-center gap-3">
-          <Image src="/autark-mark-bone.svg" alt="" width={22} height={22} />
-          <span className="text-[13px] tracking-[0.04em] text-bone">autark</span>
-          <span className="hidden text-[10px] tracking-[0.2em] text-bone-faint sm:inline">
+          <Image src="/autark-mark.svg" alt="" width={22} height={22} />
+          <span className="text-[13px] tracking-[0.04em] text-ink">autark</span>
+          <span className="hidden text-[10px] tracking-[0.2em] text-ink-faint sm:inline">
             AGENT PROFILE
           </span>
         </Link>
         <Link
           href="/"
-          className="text-[10px] tracking-[0.15em] text-bone-faint hover:text-bone-dim hover:underline"
+          className="text-[10px] tracking-[0.15em] text-ink-faint hover:text-ink-dim hover:underline"
         >
           ← LIVE ECONOMY
         </Link>
@@ -107,25 +107,25 @@ export default async function AgentProfilePage({
 
       <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6">
         {!account.found && (
-          <div className="mb-4 border border-warn bg-warn-dim/20 px-3 py-2 text-[11px] text-warn">
+          <div className="mb-4 border border-warn bg-warn-wash px-3 py-2 text-[11px] text-warn-ink">
             No on-chain Agent account found for this address — showing a generated identity only.
           </div>
         )}
 
-        <div className="flex flex-wrap items-start justify-between gap-4 border border-ink-line bg-ink-raised p-4">
+        <div className="flex flex-wrap items-start justify-between gap-4 border border-ink-line bg-bone p-4">
           <div className="flex items-center gap-4">
             <AgentAvatar identity={account.identity} size={56} />
             <div>
-              <h1 className="text-[20px] font-semibold tracking-[0.02em] text-bone">
+              <h1 className="text-[20px] font-semibold tracking-[0.02em] text-ink">
                 {account.identity.name}
               </h1>
-              <p className="mt-0.5 break-all font-mono text-[10px] text-bone-faint">{account.owner}</p>
+              <p className="mt-0.5 break-all font-mono text-[10px] text-ink-faint">{account.owner}</p>
               {account.capabilities.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1">
                   {account.capabilities.map((c) => (
                     <span
                       key={c}
-                      className="rounded-sm border border-ink-line px-1.5 py-0.5 text-[9px] tracking-[0.1em] text-bone-dim"
+                      className="border border-ink-line px-1.5 py-0.5 text-[9px] tracking-[0.1em] text-ink-dim"
                     >
                       {c}
                     </span>
@@ -133,7 +133,7 @@ export default async function AgentProfilePage({
                 </div>
               )}
               {account.endpointUrl && (
-                <p className="mt-1.5 truncate text-[10px] text-bone-faint">
+                <p className="mt-1.5 truncate text-[10px] text-ink-faint">
                   endpoint: {account.endpointUrl}
                 </p>
               )}
@@ -164,14 +164,13 @@ export default async function AgentProfilePage({
             label="CLEAN SCORE"
             value={`${clean}%`}
             danger={account.slashEvents > 0}
-            accent={account.slashEvents === 0}
           />
         </div>
 
         {slashRows.length > 0 && (
-          <section className="mt-4 border border-danger bg-danger-dim/10">
+          <section className="mt-4 border border-danger bg-danger-wash">
             <div className="border-b border-danger px-3 py-2">
-              <h2 className="text-[10px] font-semibold tracking-[0.22em] text-danger">
+              <h2 className="text-[10px] font-semibold tracking-[0.22em] text-danger-ink">
                 SLASH HISTORY · {slashRows.length}
               </h2>
             </div>
@@ -183,18 +182,18 @@ export default async function AgentProfilePage({
           </section>
         )}
 
-        <section className="mt-4 border border-ink-line bg-ink-raised">
+        <section className="mt-4 border border-ink-line bg-bone">
           <div className="flex items-center justify-between border-b border-ink-line px-3 py-2">
-            <h2 className="text-[10px] font-semibold tracking-[0.22em] text-bone-dim">
+            <h2 className="text-[10px] font-semibold tracking-[0.22em] text-ink-dim">
               ACTIVITY HISTORY · {history.rows.length}
             </h2>
             {history.truncated && (
-              <span className="text-[9px] text-bone-faint">showing recent activity only</span>
+              <span className="text-[9px] text-ink-faint">showing recent activity only</span>
             )}
           </div>
           <div>
             {visibleRows.length === 0 && (
-              <div className="px-3 py-8 text-center text-[11px] text-bone-faint">
+              <div className="px-3 py-8 text-center text-[11px] text-ink-faint">
                 no on-chain activity found for this agent
               </div>
             )}
@@ -220,11 +219,11 @@ function RankBadge({
   override?: string;
 }) {
   return (
-    <div className="border border-ink-line bg-ink px-3 py-2">
-      <div className={"text-[15px] font-semibold tabular-nums " + (good ? "text-amber" : "text-danger")}>
+    <div className="border border-ink-line bg-bone px-3 py-2">
+      <div className={"text-[15px] font-semibold tabular-nums " + (good ? "text-ink" : "text-danger-ink")}>
         {override ?? `#${rank.rank}`}
       </div>
-      <div className="mt-0.5 text-[9px] tracking-[0.14em] text-bone-faint">
+      <div className="mt-0.5 text-[9px] tracking-[0.14em] text-ink-faint">
         {label}
         {!override && ` · OF ${rank.total}`}
       </div>
@@ -246,16 +245,16 @@ function Stat({
   danger?: boolean;
 }) {
   return (
-    <div className="border border-ink-line bg-ink px-3 py-2">
+    <div className="border border-ink-line bg-bone px-3 py-2">
       <div
         className={
           "text-[16px] font-semibold tabular-nums " +
-          (danger ? "text-danger" : warn ? "text-warn" : accent ? "text-amber" : "text-bone")
+          (danger ? "text-danger-ink" : warn ? "text-warn-ink" : accent ? "text-amber-ink" : "text-ink")
         }
       >
         {value}
       </div>
-      <div className="mt-0.5 text-[9px] tracking-[0.14em] text-bone-faint">{label}</div>
+      <div className="mt-0.5 text-[9px] tracking-[0.14em] text-ink-faint">{label}</div>
     </div>
   );
 }
