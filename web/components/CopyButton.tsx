@@ -23,7 +23,7 @@ export function CopyButton({ text, label = "COPY" }: { text: string; label?: str
         "shrink-0 border px-2 py-1 text-[9px] tracking-[0.14em] transition-colors " +
         (copied
           ? "border-amber-ink text-amber-ink"
-          : "border-ink-line text-ink-dim hover:border-ink hover:text-ink")
+          : "border-ink-line text-ink-dim hover:border-bone hover:text-bone")
       }
     >
       {copied ? "COPIED" : label}

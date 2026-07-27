@@ -46,6 +46,7 @@ import {
   challengeVault,
   poolVault,
 } from "../../sdk/src/pdas";
+import { throttledFetch } from "./rpcThrottle";
 
 const accs = (obj: Record<string, unknown>) => obj as any;
 
@@ -68,7 +69,11 @@ function keypairWallet(kp: Keypair) {
 }
 
 export function signingProgram(kp: Keypair, rpcUrl: string): Program<Autark> {
-  const connection = new Connection(rpcUrl, "confirmed");
+  // Shares the same global throttle as autark.ts's getConnection() (see
+  // web/lib/rpcThrottle.ts) — the demo route's own status polling and
+  // signing calls must not be able to burst past the same RPC budget the
+  // read-only dashboard is bound by.
+  const connection = new Connection(rpcUrl, { commitment: "confirmed", fetch: throttledFetch as never });
   const provider = new AnchorProvider(connection, keypairWallet(kp), { commitment: "confirmed" });
   return new Program<Autark>(idl as unknown as Autark, provider);
 }

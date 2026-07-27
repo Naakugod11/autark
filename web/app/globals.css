@@ -1,45 +1,77 @@
 @import "tailwindcss";
 
 /*
- * Light system — printed broadsheet / paper trading terminal, not dark-mode
- * crypto glow. Bone is the dominant surface everywhere; ink is text, rules,
- * and structure; amber is spent sparingly (money, accents, the settled
- * state's quiet win). See feedStyle.ts for the full state-color system this
- * feeds — text/fill pairs below are chosen so every accent color is usable
- * BOTH as a small fill (with ink or bone on top) and, in a deeper form, as
- * text directly on bone, at real WCAG contrast (verified, not eyeballed):
+ * Dark system — Ink-dominant instrumentation panel, not dark-mode-crypto
+ * glow. Ink #15120D is now the dominant SURFACE color (page, panels, cards);
+ * Bone #ECE6DA is now the TEXT/rule color. Two elevation steps are derived
+ * from Ink by mixing toward Bone (--ink-raised, --ink-overlay) — no pure
+ * black, no blue-grays, everything stays on the warm ink↔bone axis.
  *
- *   ink on bone            16.1:1
- *   amber-ink on bone       5.4:1   (amber (#e0a100) on bone is only 2.0:1 —
- *   danger-ink on bone      7.7:1    too low for text; amber/danger/warn stay
- *   warn-ink on bone        6.4:1    fills+accents only, never body text)
- *   ink on amber            8.2:1   (badge/pill fills: ink text on a bright
- *   bone on ink            16.1:1    amber or bone-on-ink fill both hold up)
+ * --ink-dim/--ink-faint keep their old NAMES (shades of the page's
+ * foreground) but now hold bone-tinted values, since bone is the
+ * foreground now — this is the one deliberate case where a token's value
+ * changed meaning without a rename, because the name was already framed as
+ * "a shade of the current foreground," which is still true.
+ *
+ * Every accent color keeps its light-mode -ink/-bright variant SYSTEM, just
+ * re-derived: in light mode "-ink" was the deep, text-safe-on-bone twin of
+ * a bright small-mark color. On dark that inverts — the bare color (amber,
+ * danger, warn, green) stays a mid-saturation small-mark/border/glyph
+ * color, and "-ink" becomes the BRIGHT variant, since text now sits
+ * directly on dark ink and bright reads fine there (verified below).
+ * amber-deep is new: a burnt, muted amber for the rare LARGE fill (the
+ * slash block) where full-bright amber would read as neon.
+ *
+ * WCAG contrast, verified programmatically (relative-luminance formula),
+ * not eyeballed:
+ *
+ *   bone on ink            15.0:1   bone-dim(ink-dim) on ink   8.8:1
+ *   bone-faint(ink-faint)   5.2:1   amber-ink on ink          11.5:1
+ *   danger-ink on ink       6.7:1   warn-ink on ink            9.1:1
+ *   green-ink on ink        9.8:1   amber on ink               8.2:1
+ *   danger on ink           4.8:1   warn on ink                6.6:1
+ *   green on ink            6.3:1   bone on amber-deep         5.0:1
+ *   {color}-ink on {color}-wash all ≥ 6:1 (checked individually)
+ *
+ * ink-line stays deliberately low-contrast (~1.7-2:1, matching the light
+ * system's own ink-line-on-bone ratio) — these are soft separators, not
+ * text, and the restrained-rule aesthetic depends on them staying quiet.
  */
 
 :root {
-  --bone: #f2eee6;
   --ink: #15120d;
-  --ink-dim: #4a4638;
-  --ink-faint: #6b6656;
-  --ink-line: #c4b9a0;
+  --ink-raised: #26231d;
+  --ink-overlay: #3c3832;
+  --ink-line: #4b4740;
+  --ink-dim: #b6b1a7;
+  --ink-faint: #8b877e;
+
+  --bone: #ece6da;
 
   --amber: #e0a100;
-  --amber-ink: #7a5c14;
-  --amber-wash: #f7edd2;
+  --amber-ink: #f5c518;
+  --amber-wash: #31260b;
+  --amber-deep: #7a5c14;
 
-  --danger: #e2373a;
-  --danger-ink: #8f1d24;
-  --danger-wash: #f7d9d4;
+  --danger: #e5484d;
+  --danger-ink: #ff6b6b;
+  --danger-wash: #301813;
 
-  --warn: #e2661a;
-  --warn-ink: #8f3c0d;
-  --warn-wash: #f5e2ce;
+  --warn: #e67e22;
+  --warn-ink: #f4a261;
+  --warn-wash: #322110;
+
+  /* State semantics only — see header note. */
+  --green: #4ca868;
+  --green-ink: #6fcf97;
+  --green-wash: #1d271a;
 }
 
 @theme inline {
   --color-bone: var(--bone);
   --color-ink: var(--ink);
+  --color-ink-raised: var(--ink-raised);
+  --color-ink-overlay: var(--ink-overlay);
   --color-ink-dim: var(--ink-dim);
   --color-ink-faint: var(--ink-faint);
   --color-ink-line: var(--ink-line);
@@ -47,6 +79,7 @@
   --color-amber: var(--amber);
   --color-amber-ink: var(--amber-ink);
   --color-amber-wash: var(--amber-wash);
+  --color-amber-deep: var(--amber-deep);
 
   --color-danger: var(--danger);
   --color-danger-ink: var(--danger-ink);
@@ -55,6 +88,10 @@
   --color-warn: var(--warn);
   --color-warn-ink: var(--warn-ink);
   --color-warn-wash: var(--warn-wash);
+
+  --color-green: var(--green);
+  --color-green-ink: var(--green-ink);
+  --color-green-wash: var(--green-wash);
 
   --font-mono: var(--font-jetbrains-mono);
 
@@ -87,21 +124,21 @@
 }
 
 html {
-  background: var(--bone);
-  color-scheme: light;
+  background: var(--ink);
+  color-scheme: dark;
 }
 
 body {
-  background-color: var(--bone);
-  color: var(--ink);
+  background-color: var(--ink);
+  color: var(--bone);
   font-family: var(--font-jetbrains-mono), ui-monospace, "SFMono-Regular", monospace;
   font-feature-settings: "ss01" 1;
   font-variant-numeric: tabular-nums;
 }
 
 ::selection {
-  background: var(--ink);
-  color: var(--bone);
+  background: var(--bone);
+  color: var(--ink);
 }
 
 ::-webkit-scrollbar {
@@ -109,11 +146,11 @@ body {
   height: 10px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--bone);
+  background: var(--ink);
 }
 ::-webkit-scrollbar-thumb {
   background: var(--ink-line);
-  border: 2px solid var(--bone);
+  border: 2px solid var(--ink);
   border-radius: 6px;
 }
 ::-webkit-scrollbar-thumb:hover {
@@ -122,6 +159,6 @@ body {
 
 /* Fine dot-grid backdrop — reads as instrumentation, not decoration. */
 .terminal-grid {
-  background-image: radial-gradient(circle, rgba(21, 18, 13, 0.05) 1px, transparent 1px);
+  background-image: radial-gradient(circle, rgba(236, 230, 218, 0.05) 1px, transparent 1px);
   background-size: 24px 24px;
 }

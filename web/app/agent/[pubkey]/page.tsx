@@ -3,18 +3,18 @@ import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { PublicKey } from "@solana/web3.js";
-import { getAgentAccount, getAgentHistory } from "@/lib/agentProfile";
+import { getAgentAccount, getAgentHistory, getAgentBadges } from "@/lib/agentProfile";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { HistoryRow } from "@/components/HistoryRow";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
+import { ReputationBadgeRow, VanityBadgeRow } from "@/components/BadgeRow";
+import { NeighborhoodGraph } from "@/components/NeighborhoodGraph";
 
-// The actual cross-request caching for this route lives in
-// web/lib/agentProfile.ts (unstable_cache around getAgentAccount/
-// getAgentHistory) — a dynamic segment with no generateStaticParams renders
-// at request time regardless of this export, and the RPC calls underneath
-// aren't fetch()-cacheable by Next's own heuristics. This just declares the
-// same 60s window as a segment-level default/hint.
-export const revalidate = 60;
+// The actual cross-request caching lives in web/lib/chainCache.ts
+// (unstable_cache around the shared chain snapshot, reused by every profile
+// and by the landing page). This just forces request-time rendering so
+// `next build` never attempts to prerender a live chain read.
+export const dynamic = "force-dynamic";
 
 type Params = { pubkey: string };
 
@@ -78,9 +78,10 @@ export default async function AgentProfilePage({
   const { pubkey } = await params;
   if (!isValidPubkey(pubkey)) notFound();
 
-  const [account, history] = await Promise.all([
+  const [account, history, badges] = await Promise.all([
     getAgentAccount(pubkey),
     getAgentHistory(pubkey),
+    getAgentBadges(pubkey),
   ]);
 
   const clean = cleanPct(account.scoreCompleted, account.scoreFailed);
@@ -88,20 +89,20 @@ export default async function AgentProfilePage({
   const visibleRows = history.rows.slice(0, 60);
 
   return (
-    <div className="min-h-screen bg-bone text-ink">
-      <header className="flex items-center justify-between border-b border-ink px-4 py-3 sm:px-6">
+    <div className="min-h-screen bg-ink text-bone">
+      <header className="flex items-center justify-between border-b border-ink-line px-4 py-3 sm:px-6">
         <Link href="/" className="flex items-center gap-3">
-          <Image src="/autark-mark.svg" alt="" width={22} height={22} />
-          <span className="text-[13px] tracking-[0.04em] text-ink">autark</span>
+          <Image src="/autark-mark-bone.svg" alt="" width={22} height={22} />
+          <span className="text-[13px] tracking-[0.04em] text-bone">autark</span>
           <span className="hidden text-[10px] tracking-[0.2em] text-ink-faint sm:inline">
             AGENT PROFILE
           </span>
         </Link>
         <Link
-          href="/"
+          href="/terminal"
           className="text-[10px] tracking-[0.15em] text-ink-faint hover:text-ink-dim hover:underline"
         >
-          ← LIVE ECONOMY
+          ← LIVE TERMINAL
         </Link>
       </header>
 
@@ -112,11 +113,11 @@ export default async function AgentProfilePage({
           </div>
         )}
 
-        <div className="flex flex-wrap items-start justify-between gap-4 border border-ink-line bg-bone p-4">
+        <div className="flex flex-wrap items-start justify-between gap-4 border border-ink-line bg-ink-raised p-4">
           <div className="flex items-center gap-4">
             <AgentAvatar identity={account.identity} size={56} />
             <div>
-              <h1 className="text-[20px] font-semibold tracking-[0.02em] text-ink">
+              <h1 className="text-[20px] font-semibold tracking-[0.02em] text-bone">
                 {account.identity.name}
               </h1>
               <p className="mt-0.5 break-all font-mono text-[10px] text-ink-faint">{account.owner}</p>
@@ -139,8 +140,25 @@ export default async function AgentProfilePage({
               )}
             </div>
           </div>
-          <CopyLinkButton path={`/agent/${pubkey}`} />
+          <div className="flex shrink-0 flex-col items-end gap-1.5">
+            <CopyLinkButton path={`/agent/${pubkey}`} />
+            {account.found && (
+              <Link
+                href={`/agent/${pubkey}/customize`}
+                className="text-[9px] tracking-[0.12em] text-ink-faint hover:text-bone hover:underline"
+              >
+                CUSTOMIZE →
+              </Link>
+            )}
+          </div>
         </div>
+
+        {(badges.reputation.length > 0 || badges.vanity.length > 0) && (
+          <div className="mt-3 flex flex-col gap-2 border border-ink-line bg-ink-raised p-3">
+            <ReputationBadgeRow badges={badges.reputation} />
+            <VanityBadgeRow badges={badges.vanity} />
+          </div>
+        )}
 
         <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
           <RankBadge label="VOLUME" rank={account.ranks.volume} good override={!account.found ? "—" : undefined} />
@@ -167,6 +185,10 @@ export default async function AgentProfilePage({
           />
         </div>
 
+        <div className="mt-3">
+          <NeighborhoodGraph owner={pubkey} />
+        </div>
+
         {slashRows.length > 0 && (
           <section className="mt-4 border border-danger bg-danger-wash">
             <div className="border-b border-danger px-3 py-2">
@@ -182,7 +204,7 @@ export default async function AgentProfilePage({
           </section>
         )}
 
-        <section className="mt-4 border border-ink-line bg-bone">
+        <section className="mt-4 border border-ink-line bg-ink-raised">
           <div className="flex items-center justify-between border-b border-ink-line px-3 py-2">
             <h2 className="text-[10px] font-semibold tracking-[0.22em] text-ink-dim">
               ACTIVITY HISTORY · {history.rows.length}
@@ -219,8 +241,8 @@ function RankBadge({
   override?: string;
 }) {
   return (
-    <div className="border border-ink-line bg-bone px-3 py-2">
-      <div className={"text-[15px] font-semibold tabular-nums " + (good ? "text-ink" : "text-danger-ink")}>
+    <div className="border border-ink-line bg-ink-raised px-3 py-2">
+      <div className={"text-[15px] font-semibold tabular-nums " + (good ? "text-bone" : "text-danger-ink")}>
         {override ?? `#${rank.rank}`}
       </div>
       <div className="mt-0.5 text-[9px] tracking-[0.14em] text-ink-faint">
@@ -245,11 +267,11 @@ function Stat({
   danger?: boolean;
 }) {
   return (
-    <div className="border border-ink-line bg-bone px-3 py-2">
+    <div className="border border-ink-line bg-ink-raised px-3 py-2">
       <div
         className={
           "text-[16px] font-semibold tabular-nums " +
-          (danger ? "text-danger-ink" : warn ? "text-warn-ink" : accent ? "text-amber-ink" : "text-ink")
+          (danger ? "text-danger-ink" : warn ? "text-warn-ink" : accent ? "text-amber-ink" : "text-bone")
         }
       >
         {value}

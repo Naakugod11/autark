@@ -1,9 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AgentAvatar } from "./AgentAvatar";
-import type { FleetAgent } from "@/lib/economy";
+import { deriveReputationBadges, bestTier, type BadgeTier } from "@/lib/badges";
+import { buildReputationInput } from "@/lib/badgeInputs";
+import type { FleetAgent, FeedRow } from "@/lib/economy";
+
+const TIER_DOT_COLOR: Record<BadgeTier, string> = {
+  bronze: "bg-amber-deep",
+  silver: "bg-ink-dim",
+  gold: "bg-amber",
+  platinum: "bg-bone",
+};
 
 type SortMode = "volume" | "jobs" | "clean" | "shame";
 
@@ -47,16 +56,32 @@ function rank(agents: FleetAgent[], mode: SortMode): FleetAgent[] {
   }
 }
 
-export function Leaderboard({ agents }: { agents: FleetAgent[] }) {
+export function Leaderboard({ agents, feed }: { agents: FleetAgent[]; feed: FeedRow[] }) {
   const [mode, setMode] = useState<SortMode>("volume");
   const ranked = rank(agents, mode).slice(0, 8);
+
+  // Reputation credential only — deliberately not vanity badges here (see
+  // web/lib/badges.ts's wall comment): the leaderboard IS a reputation
+  // ranking, so showing vanity flair alongside it risks reading as part of
+  // the ranking signal even if it isn't. One tier dot per agent, not the
+  // full badge row a profile/fleet card has room for.
+  const bestTierByOwner = useMemo(() => {
+    const map = new Map<string, BadgeTier | null>();
+    for (const a of ranked) {
+      map.set(a.owner, bestTier(deriveReputationBadges(buildReputationInput(a, feed))));
+    }
+    return map;
+  }, [ranked, feed]);
 
   // Rank-change tracking: adjust during render on prop/mode change (the
   // React-sanctioned alternative to setState-in-effect), then use an effect
   // only for the timed fade-out of the "moved" indicator.
   const [prevMode, setPrevMode] = useState(mode);
   const [prevRanks, setPrevRanks] = useState<Map<string, number> | null>(null);
-  const [moved, setMoved] = useState<Map<string, "up" | "down">>(new Map());
+  // Signed rank delta: positive = moved up N spots, negative = moved down N
+  // spots — Task 2 asks for "animate the move and show the delta," not just
+  // a direction arrow.
+  const [moved, setMoved] = useState<Map<string, number>>(new Map());
 
   const currentRanks = new Map(ranked.map((a, i) => [a.owner, i]));
 
@@ -65,11 +90,11 @@ export function Leaderboard({ agents }: { agents: FleetAgent[] }) {
     setPrevRanks(currentRanks);
   } else if (prevRanks) {
     let rankOrderChanged = false;
-    const next = new Map<string, "up" | "down">();
+    const next = new Map<string, number>();
     for (const [owner, idx] of currentRanks) {
       const prevIdx = prevRanks.get(owner);
       if (prevIdx !== idx) rankOrderChanged = true;
-      if (prevIdx != null && prevIdx !== idx) next.set(owner, idx < prevIdx ? "up" : "down");
+      if (prevIdx != null && prevIdx !== idx) next.set(owner, prevIdx - idx);
     }
     if (rankOrderChanged) {
       setPrevRanks(currentRanks);
@@ -97,8 +122,8 @@ export function Leaderboard({ agents }: { agents: FleetAgent[] }) {
               className={
                 "border px-1.5 py-0.5 text-[9px] tracking-[0.1em] " +
                 (mode === m.key
-                  ? "border-ink bg-ink text-bone"
-                  : "border-ink-line text-ink-faint hover:text-ink")
+                  ? "border-amber bg-amber text-ink"
+                  : "border-ink-line text-ink-faint hover:text-bone")
               }
             >
               {m.label}
@@ -111,30 +136,42 @@ export function Leaderboard({ agents }: { agents: FleetAgent[] }) {
           <div className="px-3 pb-3 text-[11px] text-ink-faint">no agents yet</div>
         )}
         {ranked.map((a, i) => {
-          const direction = moved.get(a.owner);
+          const delta = moved.get(a.owner);
           return (
             <Link
               href={`/agent/${a.owner}`}
               key={a.owner}
-              className="flex items-center gap-2 border-t border-ink-line px-3 py-1.5 hover:bg-ink/[0.03]"
+              className={
+                "flex items-center gap-2 border-t border-ink-line px-3 py-1.5 transition-colors duration-700 hover:bg-bone/[0.05]" +
+                (delta ? (delta > 0 ? " bg-green-wash/40" : " bg-warn-wash/40") : "")
+              }
             >
-              <span className="flex w-7 shrink-0 items-center gap-0.5 text-[10px] tabular-nums text-ink-faint">
+              <span className="flex w-9 shrink-0 items-center gap-1 text-[10px] tabular-nums text-ink-faint">
                 {i + 1}
-                {direction && (
-                  <span className={direction === "up" ? "text-ink" : "text-warn-ink"}>
-                    {direction === "up" ? "▲" : "▼"}
+                {!!delta && (
+                  <span className={delta > 0 ? "text-green-ink" : "text-warn-ink"}>
+                    {delta > 0 ? "▲" : "▼"}
+                    {Math.abs(delta)}
                   </span>
                 )}
               </span>
               <AgentAvatar identity={a.identity} size={20} />
-              <span className="min-w-0 flex-1 truncate text-[11px] text-ink">{a.identity.name}</span>
+              <span className="flex min-w-0 flex-1 items-center gap-1.5 truncate text-[11px] text-bone">
+                {a.identity.name}
+                {bestTierByOwner.get(a.owner) && (
+                  <span
+                    className={"h-1.5 w-1.5 shrink-0 rounded-full " + TIER_DOT_COLOR[bestTierByOwner.get(a.owner)!]}
+                    title={`${bestTierByOwner.get(a.owner)} reputation credential`}
+                  />
+                )}
+              </span>
               {mode === "volume" && (
                 <span className="shrink-0 text-[11px] font-semibold tabular-nums text-amber-ink">
                   ${(a.scoreVolume / 1e6).toFixed(2)}
                 </span>
               )}
               {mode === "jobs" && (
-                <span className="shrink-0 text-[11px] font-semibold tabular-nums text-ink">
+                <span className="shrink-0 text-[11px] font-semibold tabular-nums text-bone">
                   {a.scoreCompleted}
                 </span>
               )}
@@ -142,7 +179,7 @@ export function Leaderboard({ agents }: { agents: FleetAgent[] }) {
                 <span
                   className={
                     "shrink-0 text-[11px] font-semibold tabular-nums " +
-                    (a.slashEvents === 0 ? "text-ink" : "text-ink-faint")
+                    (a.slashEvents === 0 ? "text-bone" : "text-ink-faint")
                   }
                 >
                   {Math.round(cleanScore(a) * 100)}%

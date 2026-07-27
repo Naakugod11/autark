@@ -25,25 +25,25 @@ export default function GlobalError({
           gap: 16,
           padding: 16,
           textAlign: "center",
-          background: "#F2EEE6",
-          color: "#15120D",
+          background: "#15120D",
+          color: "#ECE6DA",
           fontFamily:
             "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
         }}
       >
-        <div style={{ fontSize: 13, letterSpacing: "0.22em", color: "#8F1D24" }}>
+        <div style={{ fontSize: 13, letterSpacing: "0.22em", color: "#FF6B6B" }}>
           AUTARK IS DOWN
         </div>
-        <p style={{ maxWidth: 420, fontSize: 12, lineHeight: 1.6, color: "#4a4638" }}>
+        <p style={{ maxWidth: 420, fontSize: 12, lineHeight: 1.6, color: "#B6B1A7" }}>
           {error.message || "The app failed to render."}
         </p>
         <button
           type="button"
           onClick={reset}
           style={{
-            border: "1px solid #15120D",
-            color: "#F2EEE6",
-            background: "#15120D",
+            border: "1px solid #ECE6DA",
+            color: "#15120D",
+            background: "#ECE6DA",
             padding: "6px 12px",
             fontSize: 10,
             letterSpacing: "0.14em",

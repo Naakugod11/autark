@@ -23,6 +23,7 @@ import type { Autark } from "../../target/types/autark";
 import { Connection, PublicKey } from "@solana/web3.js";
 import { Program, AnchorProvider, BN } from "@anchor-lang/core";
 import type { Transaction, VersionedTransaction } from "@solana/web3.js";
+import { throttledFetch } from "./rpcThrottle";
 
 // ── Connection ─────────────────────────────────────────────────────────────────
 //
@@ -43,7 +44,12 @@ export function getRpcUrl(): string {
 }
 
 export function getConnection(): Connection {
-  return new Connection(getRpcUrl(), "confirmed");
+  // fetch: throttledFetch routes every request through the shared RPC gate
+  // (web/lib/rpcThrottle.ts) — the fix for the 429 storms (Task 0). Every
+  // getConnection() call (browser terminal, server chainCache warm) shares
+  // the same module-level throttle regardless of how many Connection
+  // instances get built.
+  return new Connection(getRpcUrl(), { commitment: "confirmed", fetch: throttledFetch as never });
 }
 
 // ── Read-only Program ──────────────────────────────────────────────────────────

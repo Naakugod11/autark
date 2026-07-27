@@ -16,7 +16,20 @@
 import { useEffect, useRef, useState } from "react";
 import { getProgram, fetchAgents, fetchSlashingPool } from "./autark";
 import { stream, type AutarkEvent, type AutarkEventHandlers } from "./events";
-import { identityFor, type AgentIdentity } from "./identity";
+import { resolveIdentity, type AgentIdentity, type IdentityOverridesManifest } from "./identity";
+
+// Best-effort, non-blocking: if this fails or is slow, every identity just
+// falls back to identityFor()'s static-config/deterministic tiers (Task 4's
+// upload tier is additive, never load-bearing for the app to function).
+async function fetchIdentityOverrides(): Promise<IdentityOverridesManifest> {
+  try {
+    const res = await fetch("/api/identity-overrides", { cache: "no-store" });
+    if (!res.ok) return {};
+    return (await res.json()) as IdentityOverridesManifest;
+  } catch {
+    return {};
+  }
+}
 
 export type FeedState =
   | "proposed" | "accepted" | "pending" | "settled" | "bounty"
@@ -56,6 +69,8 @@ export type FleetAgent = {
 
 export type ConnStatus = "connecting" | "backfilling" | "live" | "error";
 
+export type BiggestSlash = { amount: number; provider?: string; ts: number };
+
 export type EconomyState = {
   status: ConnStatus;
   error: string | null;
@@ -65,6 +80,16 @@ export type EconomyState = {
   volume24h: number;
   eventsLast5Min: number;
   lastSlashId: string | null;
+  // Task 2 (gamification) — arena stats strip. biggestSlashToday is derived
+  // from the full feed (backfill + live) within a rolling 24h window, same
+  // basis as volume24h. The session counters are deliberately scoped to
+  // events witnessed LIVE after this tab started watching (gated the same
+  // way totalSlashed's live-only increment already was) — they're an
+  // engagement metric ("what happened while you were here"), not a
+  // duplicate of the on-chain history any backfill would also show.
+  biggestSlashToday: BiggestSlash | null;
+  sessionEventsWitnessed: number;
+  sessionTotalSlashed: number;
 };
 
 const INITIAL_STATE: EconomyState = {
@@ -76,6 +101,9 @@ const INITIAL_STATE: EconomyState = {
   volume24h: 0,
   eventsLast5Min: 0,
   lastSlashId: null,
+  biggestSlashToday: null,
+  sessionEventsWitnessed: 0,
+  sessionTotalSlashed: 0,
 };
 
 const FEED_CAP = 300;
@@ -86,7 +114,12 @@ function fmtUsdc(micro: number): string {
   return (micro / 1e6).toFixed(2);
 }
 
-export function useEconomy(): EconomyState {
+// `enabled` gates the whole effect — used by EconomyProvider to defer
+// starting the subscription until the visitor actually reaches /terminal
+// (the landing page renders before this ever runs, so it never opens a
+// websocket), then leaves it running for the rest of the session so
+// navigating away and back doesn't re-trigger a cold backfill.
+export function useEconomy(enabled: boolean = true): EconomyState {
   const [state, setState] = useState<EconomyState>(INITIAL_STATE);
 
   const agentsMapRef = useRef<Map<string, FleetAgent>>(new Map());
@@ -96,8 +129,12 @@ export function useEconomy(): EconomyState {
   const liveRef = useRef(false);
   const lastSlashIdRef = useRef<string | null>(null);
   const startedRef = useRef(false);
+  const sessionEventsRef = useRef(0);
+  const sessionTotalSlashedRef = useRef(0);
+  const overridesRef = useRef<IdentityOverridesManifest>({});
 
   useEffect(() => {
+    if (!enabled) return;
     if (startedRef.current) return;
     startedRef.current = true;
     let cancelled = false;
@@ -107,7 +144,7 @@ export function useEconomy(): EconomyState {
 
     function nameOf(pk: string | undefined): string {
       if (!pk) return "unknown";
-      return agentsMapRef.current.get(pk)?.identity.name ?? identityFor(pk).name;
+      return agentsMapRef.current.get(pk)?.identity.name ?? resolveIdentity(pk, overridesRef.current).name;
     }
 
     function upsertAgent(owner: string, patch: Partial<FleetAgent>) {
@@ -128,6 +165,17 @@ export function useEconomy(): EconomyState {
     function pushFeed(row: FeedRow) {
       feedRef.current = [row, ...feedRef.current].slice(0, FEED_CAP);
       if (row.state === "slash") lastSlashIdRef.current = row.id;
+      // Session counters (Task 2's arena stats strip) only advance for
+      // events that arrive AFTER backfill finishes — same liveRef gate
+      // totalSlashed's own live-only increment already uses — so they read
+      // as "what happened while you were watching," not a re-count of
+      // history the backfill would show regardless of when you opened the tab.
+      if (liveRef.current) {
+        sessionEventsRef.current += 1;
+        if (row.state === "slash" && row.slashed) {
+          sessionTotalSlashedRef.current += row.slashed;
+        }
+      }
     }
 
     function makeRow(
@@ -166,6 +214,10 @@ export function useEconomy(): EconomyState {
         (n, r) => (now - r.ts <= FIVE_MIN_MS ? n + 1 : n),
         0
       );
+      const biggestSlashToday = feed.reduce<BiggestSlash | null>((max, r) => {
+        if (r.state !== "slash" || !r.slashed || now - r.ts > DAY_MS) return max;
+        return !max || r.slashed > max.amount ? { amount: r.slashed, provider: r.provider, ts: r.ts } : max;
+      }, null);
       setState({
         status: liveRef.current ? "live" : "backfilling",
         error: null,
@@ -175,6 +227,9 @@ export function useEconomy(): EconomyState {
         volume24h,
         eventsLast5Min,
         lastSlashId: lastSlashIdRef.current,
+        biggestSlashToday,
+        sessionEventsWitnessed: sessionEventsRef.current,
+        sessionTotalSlashed: sessionTotalSlashedRef.current,
       });
     }
 
@@ -185,19 +240,21 @@ export function useEconomy(): EconomyState {
         // surfaces through the same "error" status/message path as an
         // unreachable RPC, instead of an uncaught exception in the effect.
         const program = getProgram();
-        const [agents, pool] = await Promise.all([
+        const [agents, pool, overrides] = await Promise.all([
           fetchAgents(program),
           fetchSlashingPool(program),
+          fetchIdentityOverrides(),
         ]);
         if (cancelled) return;
         retryDelay = 5000;
+        overridesRef.current = overrides;
 
         for (const a of agents) {
           const owner = a.owner.toBase58();
           agentsMapRef.current.set(owner, {
             owner,
             pubkey: a.pubkey.toBase58(),
-            identity: identityFor(owner),
+            identity: resolveIdentity(owner, overrides),
             capabilities: a.capabilities,
             stakeAmount: a.stakeAmount,
             scoreCompleted: a.scoreCompleted,
@@ -453,7 +510,7 @@ export function useEconomy(): EconomyState {
       if (retryTimer) clearTimeout(retryTimer);
       unsub?.();
     };
-  }, []);
+  }, [enabled]);
 
   return state;
 }

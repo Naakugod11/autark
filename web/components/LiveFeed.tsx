@@ -68,8 +68,8 @@ export function LiveFeed({
               className={
                 "border px-1.5 py-0.5 text-[9px] tracking-[0.1em] transition-colors " +
                 (family === f.key
-                  ? "border-ink bg-ink text-bone"
-                  : "border-ink-line text-ink-faint hover:text-ink")
+                  ? "border-amber bg-amber text-ink"
+                  : "border-ink-line text-ink-faint hover:text-bone")
               }
             >
               {f.label}
@@ -79,7 +79,7 @@ export function LiveFeed({
         <select
           value={agentFilter}
           onChange={(e) => setAgentFilter(e.target.value)}
-          className="ml-auto border border-ink-line bg-bone px-1.5 py-0.5 text-[9px] tracking-[0.1em] text-ink-dim outline-none"
+          className="ml-auto border border-ink-line bg-ink px-1.5 py-0.5 text-[9px] tracking-[0.1em] text-ink-dim outline-none"
         >
           <option value="all">ALL AGENTS</option>
           {agentOptions.map(([pk, name]) => (

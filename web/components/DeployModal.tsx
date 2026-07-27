@@ -28,12 +28,12 @@ await client.ix
   })
   .rpc();`;
 
-// Code blocks stay dark-on-light deliberately — a small "terminal within the
-// page" moment, the one other place (besides the slash treatment) ink runs
-// as a fill instead of text.
+// Recessed one step below the modal's own elevated surface — reads as a
+// "terminal within the terminal," an inset screen rather than another
+// raised card.
 function CodeBlock({ code }: { code: string }) {
   return (
-    <div className="relative border border-ink bg-ink">
+    <div className="relative border border-ink-line bg-ink">
       <div className="flex items-center justify-end border-b border-bone/15 px-2 py-1">
         <CopyButton text={code} />
       </div>

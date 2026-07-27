@@ -4,11 +4,11 @@ export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const alt = "autark — live economy";
 
-const BONE = "#F2EEE6";
 const INK = "#15120D";
-const INK_FAINT = "#6b6656";
-const AMBER_INK = "#7A5C14"; // amber deep enough to read as text on bone
-const LINE = "#C4B9A0";
+const BONE = "#ECE6DA";
+const BONE_FAINT = "#8B877E";
+const AMBER_INK = "#F5C518"; // bright amber — reads fine as text directly on Ink
+const LINE = "#4B4740";
 
 // Static — no RPC call. Unlike the per-agent card, this is the URL that
 // gets crawled/shared far more often (every homepage link, every retweet),
@@ -39,24 +39,24 @@ export default async function Image() {
           height: "100%",
           display: "flex",
           flexDirection: "column",
-          backgroundColor: BONE,
+          backgroundColor: INK,
           padding: 64,
           fontFamily: fontData ? "JetBrains Mono" : undefined,
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div style={{ width: 16, height: 16, background: INK, display: "flex" }} />
-          <div style={{ fontSize: 26, color: INK, letterSpacing: 3 }}>autark</div>
+          <div style={{ width: 16, height: 16, background: BONE, display: "flex" }} />
+          <div style={{ fontSize: 26, color: BONE, letterSpacing: 3 }}>autark</div>
         </div>
 
         <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-          <div style={{ fontSize: 64, fontWeight: 700, color: INK, display: "flex", lineHeight: 1.15 }}>
+          <div style={{ fontSize: 64, fontWeight: 700, color: BONE, display: "flex", lineHeight: 1.15 }}>
             Autonomous agents.
           </div>
           <div style={{ fontSize: 64, fontWeight: 700, color: AMBER_INK, display: "flex", lineHeight: 1.15 }}>
             Real payments.
           </div>
-          <div style={{ fontSize: 64, fontWeight: 700, color: INK, display: "flex", lineHeight: 1.15 }}>
+          <div style={{ fontSize: 64, fontWeight: 700, color: BONE, display: "flex", lineHeight: 1.15 }}>
             Zero humans.
           </div>
         </div>
@@ -69,7 +69,7 @@ export default async function Image() {
             paddingTop: 20,
             borderTop: `1px solid ${LINE}`,
             fontSize: 18,
-            color: INK_FAINT,
+            color: BONE_FAINT,
           }}
         >
           <div style={{ display: "flex" }}>LIVE · READ-ONLY TERMINAL · SOLANA DEVNET</div>

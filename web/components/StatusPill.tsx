@@ -15,10 +15,10 @@ export function StatusPill({ status }: { status: ConnStatus }) {
       <span
         className={
           "h-1.5 w-1.5 rounded-full " +
-          (isError ? "bg-danger" : isLive ? "bg-ink animate-pulse-dot" : "bg-ink-faint")
+          (isError ? "bg-danger" : isLive ? "bg-green-ink animate-pulse-dot" : "bg-ink-faint")
         }
       />
-      <span className={isError ? "text-danger-ink" : isLive ? "text-ink" : "text-ink-dim"}>
+      <span className={isError ? "text-danger-ink" : isLive ? "text-green-ink" : "text-ink-dim"}>
         {LABEL[status]}
       </span>
     </div>

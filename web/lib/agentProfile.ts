@@ -1,50 +1,29 @@
 /**
- * web/lib/agentProfile.ts — server-safe, one-shot data loader for
- * /agent/[pubkey]. No subscription: a cold direct visit (including a social
- * unfurl crawler hitting generateMetadata / opengraph-image) must render
- * real data without the main dashboard's live store ever having run.
+ * web/lib/agentProfile.ts — derives /agent/[pubkey]'s data from the shared
+ * chain caches (web/lib/chainCache.ts). No RPC call lives in this file.
  *
- * Split in two so the OG image (must be fast) never pays for event replay:
- *   - getAgentAccount(owner)  — single fetchAgents() call, gives identity,
- *     scores, stake, and all four leaderboard ranks. Used by generateMetadata,
- *     opengraph-image, and the page body.
- *   - getAgentHistory(owner)  — backfill()'s the event log and filters to
- *     this agent's activity. Slower (still parallelized), page body only.
+ * Split in two, matching chainCache.ts's own split by cost:
+ *   - getAgentAccount(owner) — identity, scores, stake, all four ranks.
+ *     Only needs getAgentsSnapshot() (cheap) — this is what generateMetadata
+ *     and the OG image call, so neither pays for event-row processing.
+ *   - getAgentHistory(owner) — this agent's slice of the shared row list.
+ *     Needs getEventRows() too (the expensive 350-signature backfill) —
+ *     only the profile page body calls this.
  *
- * Row construction intentionally mirrors web/lib/economy.ts's event handlers
- * rather than importing from them — economy.ts's handlers are closures over
- * live refs (fleet patching, totalSlashed accumulation) that only make sense
- * inside the running subscription. Duplicating the pure headline/state logic
- * here is a few dozen lines; refactoring the proven live pipeline to share it
- * is not worth the risk.
- *
- * Caching: every export here is wrapped in unstable_cache (persists across
- * requests, not just within one) on top of React's cache() (dedupes calls
- * within one request/render). This matters more than it looks: a profile
- * page's own render and its opengraph-image are SEPARATE HTTP requests, so
- * React's cache() alone doesn't stop a shared profile link from costing an
- * RPC round-trip per social-crawler hit. @solana/web3.js's RPC client is a
- * plain POST fetch Next.js doesn't auto-cache (fetches default to no-store
- * since Next 15, and that default isn't overridden by a route's `revalidate`
- * export the way GET route handlers are — verified empirically: without
- * unstable_cache here, curling a profile page twice showed no
- * `x-nextjs-cache` header and `Cache-Control: no-store` both times, i.e. a
- * fresh fetchAgents()/backfill() call every single request). unstable_cache
- * is the documented fix for exactly this "non-fetch data source" case.
+ * Neither wraps unstable_cache itself: the expensive part (RPC + event→row
+ * conversion) is already cached upstream in chainCache.ts, so per-owner
+ * derivation here is cheap in-memory filtering/sorting. React's cache()
+ * still dedupes repeat calls within one request (generateMetadata +
+ * the page body both ask for the same owner).
  */
 
 import { cache } from "react";
-import { unstable_cache } from "next/cache";
-import { getProgram, fetchAgents, type AgentData } from "./autark";
-import { backfill, type AutarkEvent } from "./events";
-import { identityFor, type AgentIdentity } from "./identity";
+import { getAgentsSnapshot, getEventRows, type PlainAgent } from "./chainCache";
+import { resolveIdentity, type AgentIdentity } from "./identity";
+import { getIdentityOverrides } from "./identityOverrides";
 import type { FeedRow, FleetAgent } from "./economy";
-
-// Shared revalidate window for both cached exports below — see module doc.
-// Tradeoff: a profile's stats/history/OG card can lag up to this long behind
-// chain state on a cold load. Fine for a shareable snapshot; the live
-// dashboard at "/" is the real-time surface.
-const PROFILE_CACHE_SECONDS = 60;
+import { deriveReputationBadges, deriveVanityBadges, type ReputationBadge, type VanityBadge } from "./badges";
+import { buildReputationInput, buildVanityInput, computeRegistrationRanks } from "./badgeInputs";
 
 // ── Ranks ────────────────────────────────────────────────────────────────────
 
@@ -57,22 +36,22 @@ export type AgentRanks = {
   shame: RankEntry;
 };
 
-function cleanScore(a: AgentData): number {
+function cleanScore(a: PlainAgent): number {
   const total = a.scoreCompleted + a.scoreFailed;
   return total === 0 ? 1 : a.scoreCompleted / total;
 }
 
 function computeRank(
-  agents: AgentData[],
+  agents: PlainAgent[],
   owner: string,
-  cmp: (a: AgentData, b: AgentData) => number
+  cmp: (a: PlainAgent, b: PlainAgent) => number
 ): RankEntry {
   const sorted = [...agents].sort(cmp);
-  const idx = sorted.findIndex((a) => a.owner.toBase58() === owner);
+  const idx = sorted.findIndex((a) => a.owner === owner);
   return { rank: idx === -1 ? sorted.length + 1 : idx + 1, total: sorted.length };
 }
 
-function computeRanks(agents: AgentData[], owner: string): AgentRanks {
+function computeRanks(agents: PlainAgent[], owner: string): AgentRanks {
   return {
     volume: computeRank(agents, owner, (a, b) => b.scoreVolume - a.scoreVolume),
     jobs: computeRank(agents, owner, (a, b) => b.scoreCompleted - a.scoreCompleted),
@@ -113,10 +92,10 @@ export type AgentAccountProfile = {
 };
 
 async function loadAgentAccount(owner: string): Promise<AgentAccountProfile> {
-  const program = getProgram();
-  const agents = await fetchAgents(program);
-  const match = agents.find((a) => a.owner.toBase58() === owner);
-  const identity = identityFor(owner);
+  const [snapshot, overrides] = await Promise.all([getAgentsSnapshot(), getIdentityOverrides()]);
+  const agents = snapshot.agents;
+  const match = agents.find((a) => a.owner === owner);
+  const identity = resolveIdentity(owner, overrides);
   const ranks = computeRanks(agents, owner);
 
   if (!match) {
@@ -142,7 +121,7 @@ async function loadAgentAccount(owner: string): Promise<AgentAccountProfile> {
   return {
     found: true,
     owner,
-    pubkey: match.pubkey.toBase58(),
+    pubkey: match.pubkey,
     identity,
     capabilities: match.capabilities,
     endpointUrl: match.endpointUrl,
@@ -158,189 +137,13 @@ async function loadAgentAccount(owner: string): Promise<AgentAccountProfile> {
   };
 }
 
-export const getAgentAccount = cache(
-  unstable_cache(loadAgentAccount, ["agent-account"], { revalidate: PROFILE_CACHE_SECONDS })
-);
+export const getAgentAccount = cache(loadAgentAccount);
 
-// Full fleet, for resolving *other* agents' names inside this agent's history
-// (e.g. who hired them). cache()'d separately so getAgentAccount's own
-// fetchAgents() call is reused instead of duplicated within one request.
-const getAllAgents = cache(async (): Promise<AgentData[]> => {
-  return fetchAgents(getProgram());
-});
-
-// ── History ──────────────────────────────────────────────────────────────────
-
-function fmtUsdc(micro: number): string {
-  return (micro / 1e6).toFixed(2);
-}
-
-type JobRef = { consumer: string; provider: string; amount: number };
-
-function buildJobsMap(events: AutarkEvent[]): Map<string, JobRef> {
-  const map = new Map<string, JobRef>();
-  for (const e of events) {
-    if (e.name === "jobProposed") {
-      map.set(e.data.job.toBase58(), {
-        consumer: e.data.consumer.toBase58(),
-        provider: e.data.provider.toBase58(),
-        amount: e.data.amount.toNumber(),
-      });
-    } else if (e.name === "bountyAwarded") {
-      map.set(e.data.job.toBase58(), {
-        consumer: e.data.poster.toBase58(),
-        provider: e.data.provider.toBase58(),
-        amount: e.data.price.toNumber(),
-      });
-    }
-  }
-  return map;
-}
-
-// Mirrors economy.ts's per-event row shape (state, headline, badge) exactly —
-// see module doc for why this is a separate, pure copy.
-function eventToRow(e: AutarkEvent, jobs: Map<string, JobRef>, nameOf: (pk?: string) => string): FeedRow | null {
-  const base = { id: `${e.signature}:${e.name}`, slot: e.slot, signature: e.signature, ts: e.blockTime != null ? e.blockTime * 1000 : 0, kind: e.name };
-
-  switch (e.name) {
-    case "jobProposed": {
-      const consumer = e.data.consumer.toBase58();
-      const provider = e.data.provider.toBase58();
-      const amount = e.data.amount.toNumber();
-      return { ...base, state: "proposed", consumer, provider, amount, headline: `${nameOf(consumer)} → ${fmtUsdc(amount)} USDC → ${nameOf(provider)}`, badge: "PROPOSED" };
-    }
-    case "jobAccepted": {
-      const provider = e.data.provider.toBase58();
-      const ref = jobs.get(e.data.job.toBase58());
-      const amount = e.data.amount.toNumber();
-      return { ...base, state: "accepted", consumer: ref?.consumer, provider, amount, headline: `${nameOf(ref?.consumer)} → ${fmtUsdc(amount)} USDC → ${nameOf(provider)}`, badge: "ACCEPTED · ESCROW" };
-    }
-    case "settlementPendingEvent": {
-      const provider = e.data.provider.toBase58();
-      const ref = jobs.get(e.data.job.toBase58());
-      return { ...base, state: "pending", consumer: ref?.consumer, provider, amount: ref?.amount, headline: `${nameOf(ref?.consumer)} → ${ref?.amount != null ? fmtUsdc(ref.amount) : "—"} USDC → ${nameOf(provider)}`, badge: "SETTLEMENT PENDING" };
-    }
-    case "jobSettled": {
-      const provider = e.data.provider.toBase58();
-      const ref = jobs.get(e.data.job.toBase58());
-      const amount = e.data.amount.toNumber();
-      return { ...base, state: "settled", consumer: ref?.consumer, provider, amount, headline: `${nameOf(ref?.consumer)} → ${fmtUsdc(amount)} USDC → ${nameOf(provider)}`, badge: "SETTLED" };
-    }
-    case "bountyPosted": {
-      const poster = e.data.poster.toBase58();
-      const maxAmount = e.data.maxAmount.toNumber();
-      return { ...base, state: "bounty", consumer: poster, amount: maxAmount, headline: `${nameOf(poster)} posts bounty · ${e.data.capabilityRequired} · up to ${fmtUsdc(maxAmount)} USDC`, badge: "BOUNTY OPEN" };
-    }
-    case "bidSubmitted": {
-      const bidder = e.data.bidder.toBase58();
-      const price = e.data.price.toNumber();
-      return { ...base, state: "bounty", provider: bidder, amount: price, headline: `${nameOf(bidder)} bids ${fmtUsdc(price)} USDC on open bounty`, badge: "BID" };
-    }
-    case "bountyAwarded": {
-      const consumer = e.data.poster.toBase58();
-      const provider = e.data.provider.toBase58();
-      const amount = e.data.price.toNumber();
-      return { ...base, state: "accepted", consumer, provider, amount, headline: `${nameOf(consumer)} → ${fmtUsdc(amount)} USDC → ${nameOf(provider)}`, badge: "BOUNTY AWARDED" };
-    }
-    case "challengeOpened": {
-      const challenger = e.data.challenger.toBase58();
-      const defender = e.data.defender.toBase58();
-      const amount = e.data.amount.toNumber();
-      const ref = jobs.get(e.data.job.toBase58());
-      return { ...base, state: "challenged", consumer: challenger, provider: defender, amount: ref?.amount ?? amount, headline: `${nameOf(challenger)} challenges ${nameOf(defender)} · ${fmtUsdc(amount)} USDC at stake`, badge: "DISPUTE OPEN" };
-    }
-    case "challengeDefended": {
-      const defender = e.data.defender.toBase58();
-      return { ...base, state: "defended", provider: defender, amount: e.data.amount.toNumber(), headline: `${nameOf(defender)} defends the challenge · stake returned`, badge: "DEFENDED" };
-    }
-    case "challengeResolved": {
-      const ref = jobs.get(e.data.job.toBase58());
-      const provider = ref?.provider;
-      const slashed = e.data.slashed.toNumber();
-      const isSlash = !e.data.defended && slashed > 0;
-      const row: FeedRow = {
-        ...base,
-        state: isSlash ? "slash" : "defended",
-        consumer: ref?.consumer,
-        provider,
-        amount: ref?.amount,
-        headline: isSlash
-          ? `${nameOf(provider)} SLASHED · −${fmtUsdc(slashed)} USDC · challenge upheld`
-          : `${nameOf(provider)} defended · challenge dismissed`,
-        badge: isSlash ? "SLASHED" : "DEFENDED",
-      };
-      if (isSlash) row.slashed = slashed;
-      return row;
-    }
-    case "jobRejected": {
-      const provider = e.data.provider.toBase58();
-      return { ...base, state: "rejected", provider, amount: e.data.refunded.toNumber(), headline: `${nameOf(provider)} rejected the job · consumer refunded`, badge: "REJECTED" };
-    }
-    case "jobExpired": {
-      const provider = e.data.provider.toBase58();
-      const slashed = e.data.slashed.toNumber();
-      const isSlash = slashed > 0;
-      const row: FeedRow = {
-        ...base,
-        state: isSlash ? "slash" : "expired",
-        provider,
-        amount: e.data.refunded.toNumber(),
-        headline: isSlash ? `${nameOf(provider)} SLASHED · −${fmtUsdc(slashed)} USDC · delivery deadline missed` : `${nameOf(provider)} job expired · consumer refunded`,
-        badge: isSlash ? "SLASHED" : "EXPIRED",
-      };
-      if (isSlash) row.slashed = slashed;
-      return row;
-    }
-    case "jobAbandoned": {
-      const provider = e.data.provider.toBase58();
-      const slashed = e.data.slashed.toNumber();
-      const isSlash = slashed > 0;
-      const row: FeedRow = {
-        ...base,
-        state: isSlash ? "slash" : "abandoned",
-        provider,
-        amount: e.data.refunded.toNumber(),
-        headline: isSlash ? `${nameOf(provider)} SLASHED · −${fmtUsdc(slashed)} USDC · job abandoned` : `${nameOf(provider)} abandoned the job`,
-        badge: isSlash ? "SLASHED" : "ABANDONED",
-      };
-      if (isSlash) row.slashed = slashed;
-      return row;
-    }
-    default:
-      return null;
-  }
-}
-
-function rowInvolves(row: FeedRow, owner: string): boolean {
-  return row.consumer === owner || row.provider === owner;
-}
-
-export type AgentHistory = {
-  rows: FeedRow[]; // newest first, this agent's activity only
-  agentsByOwner: Map<string, FleetAgent>;
-  truncated: boolean; // true if backfill's signature cap may have cut off older history
-};
-
-// unstable_cache persists its return value through a serialize/deserialize
-// round-trip — a Map survives the *first* (in-process, pre-persist) read but
-// comes back as a plain object missing .get() once served from the
-// persisted copy (confirmed in prod verification: 500s with "b.get is not a
-// function" starting on the 3rd request to the same profile). So the cached
-// loader below returns entries as a plain array, and getAgentHistory
-// rebuilds the real Map on every call — cheap, and keeps every existing
-// caller (HistoryRow, FeedRowItem) working with an actual Map.
-type CachedAgentHistory = {
-  rows: FeedRow[];
-  agentsByOwner: [string, FleetAgent][];
-  truncated: boolean;
-};
-
-function toFleetAgent(a: AgentData): FleetAgent {
-  const owner = a.owner.toBase58();
+function toFleetAgent(a: PlainAgent, overrides: import("./identity").IdentityOverridesManifest): FleetAgent {
   return {
-    owner,
-    pubkey: a.pubkey.toBase58(),
-    identity: identityFor(owner),
+    owner: a.owner,
+    pubkey: a.pubkey,
+    identity: resolveIdentity(a.owner, overrides),
     capabilities: a.capabilities,
     stakeAmount: a.stakeAmount,
     scoreCompleted: a.scoreCompleted,
@@ -353,35 +156,58 @@ function toFleetAgent(a: AgentData): FleetAgent {
   };
 }
 
-async function loadAgentHistory(owner: string): Promise<CachedAgentHistory> {
-  const program = getProgram();
-  const allAgents = await getAllAgents();
-  const agentsByOwner = new Map(allAgents.map((a) => [a.owner.toBase58(), toFleetAgent(a)]));
-  const nameOf = (pk?: string) => (pk ? (agentsByOwner.get(pk)?.identity.name ?? identityFor(pk).name) : "unknown");
+// ── History ──────────────────────────────────────────────────────────────────
 
-  const SIG_LIMIT = 350;
-  const events = await backfill(program, { limit: SIG_LIMIT });
-  const jobs = buildJobsMap(events);
+function rowInvolves(row: FeedRow, owner: string): boolean {
+  return row.consumer === owner || row.provider === owner;
+}
 
-  const rows: FeedRow[] = [];
-  for (const e of events) {
-    const row = eventToRow(e, jobs, nameOf);
-    if (row && rowInvolves(row, owner)) rows.push(row);
-  }
-  rows.reverse(); // newest first
+export type AgentHistory = {
+  rows: FeedRow[]; // newest first, this agent's activity only
+  agentsByOwner: Map<string, FleetAgent>;
+  truncated: boolean; // true if the shared snapshot's signature cap may have cut off older history
+};
+
+async function loadAgentHistory(owner: string): Promise<AgentHistory> {
+  const [agentsSnapshot, eventRows, overrides] = await Promise.all([
+    getAgentsSnapshot(),
+    getEventRows(),
+    getIdentityOverrides(),
+  ]);
+  const agentsByOwner = new Map(agentsSnapshot.agents.map((a) => [a.owner, toFleetAgent(a, overrides)]));
+
+  // eventRows.rows is chronological ascending (oldest → newest); reverse to
+  // match the page's newest-first display.
+  const rows = eventRows.rows.filter((r) => rowInvolves(r, owner)).reverse();
+
+  return { rows, agentsByOwner, truncated: eventRows.truncated };
+}
+
+export const getAgentHistory = cache(loadAgentHistory);
+
+// ── Badges (Task 3) ────────────────────────────────────────────────────────
+//
+// Unlike getAgentAccount (agents-snapshot only, cheap), this needs
+// getEventRows() too — dispute-survivor and the vanity badges are derived
+// from event history. That means calling this (from the profile page, the
+// OG image, or the leaderboard) can pay the full backfill cost on a cold
+// cache, same as the landing page already does — acceptable because it's
+// the SAME shared, single-flighted, throttled cache every other consumer
+// already warms (web/lib/chainCache.ts), not a second independent read.
+export type AgentBadges = { reputation: ReputationBadge[]; vanity: VanityBadge[] };
+
+async function loadAgentBadges(owner: string): Promise<AgentBadges> {
+  const [agentsSnapshot, eventRows] = await Promise.all([getAgentsSnapshot(), getEventRows()]);
+  const match = agentsSnapshot.agents.find((a) => a.owner === owner);
+  if (!match) return { reputation: [], vanity: [] };
+
+  const ranks = computeRegistrationRanks(agentsSnapshot.agents.map((a) => ({ owner: a.owner, createdAt: a.createdAt })));
+  const registrationRank = ranks.get(owner) ?? 0;
 
   return {
-    rows,
-    agentsByOwner: Array.from(agentsByOwner.entries()),
-    truncated: events.length > 0 && events.length >= SIG_LIMIT * 0.9,
+    reputation: deriveReputationBadges(buildReputationInput(match, eventRows.rows)),
+    vanity: deriveVanityBadges(buildVanityInput(owner, eventRows.rows, registrationRank)),
   };
 }
 
-const getCachedAgentHistory = unstable_cache(loadAgentHistory, ["agent-history"], {
-  revalidate: PROFILE_CACHE_SECONDS,
-});
-
-export const getAgentHistory = cache(async (owner: string): Promise<AgentHistory> => {
-  const cached = await getCachedAgentHistory(owner);
-  return { ...cached, agentsByOwner: new Map(cached.agentsByOwner) };
-});
+export const getAgentBadges = cache(loadAgentBadges);

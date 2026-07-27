@@ -12,7 +12,9 @@
     "@anthropic-ai/sdk": "^0.105.0",
     "@solana/web3.js": "^1.98.4",
     "bs58": "^6.0.0",
-    "dotenv": "^17.4.2"
+    "dotenv": "^17.4.2",
+    "sharp": "^0.35.3",
+    "tweetnacl": "^1.0.3"
   },
   "devDependencies": {
     "@solana/spl-token": "^0.3.11",

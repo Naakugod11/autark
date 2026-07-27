@@ -44,7 +44,7 @@ export function FeedRowItem({ row, agents }: { row: FeedRow; agents: Map<string,
       className={
         "animate-slide-in flex items-center gap-2.5 border-b border-ink-line px-3 py-2 " +
         style.ruleWidth + " " + style.accent + " " + style.wash + " " +
-        (isSlash ? "animate-slash-shake" : "hover:bg-ink/[0.03]")
+        (isSlash ? "animate-slash-shake" : "hover:bg-bone/[0.05]")
       }
     >
       <span className={"w-3 shrink-0 text-center text-[11px] leading-none " + style.glyphColor}>{style.glyph}</span>

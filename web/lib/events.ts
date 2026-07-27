@@ -21,11 +21,20 @@ const PROGRAM_ID = new PublicKey("FgkicN5V1fYLFJaY6nH9er3vvCr1nJCQVA9Wy7e3kLhy")
 // concurrent traffic, but a shorter history window on first paint (the live
 // feed still fills in from there; FEED_CAP in economy.ts keeps only the
 // most recent 300 rows anyway, so backfilling far beyond that is largely
-// wasted RPC spend). Tuned down from an earlier 500-signature/8-way-
-// concurrent default that was sized for local single-visitor testing, not
-// public traffic.
-const STREAM_BACKFILL_LIMIT = 250;
-const BACKFILL_CONCURRENCY = 5;
+// wasted RPC spend).
+//
+// Task 0 (429 storms): tuned down again, from 250/5-way to 120/4-way, as
+// part of the same pass that added the shared RPC throttle
+// (web/lib/rpcThrottle.ts). Investigated JSON-RPC batch requests (bundling
+// N getTransaction calls into one HTTP POST) as a way to cut real request
+// COUNT rather than just pacing them — empirically rejected by Helius's
+// free tier ("Batch requests are only available for paid plans", verified
+// with a 2-call batch against the configured devnet key), so this codebase
+// does not batch. Cost is cut instead via this smaller limit plus the
+// throttle's single-flight dedupe (concurrent callers requesting the exact
+// same signature collapse to one request).
+const STREAM_BACKFILL_LIMIT = 120;
+const BACKFILL_CONCURRENCY = 4;
 
 // ── Event payload types (camelCase — matches Anchor 1.0 decoded output) ───────
 
@@ -292,10 +301,18 @@ async function mapWithConcurrency<T, R>(
 // getTransaction call ourselves, so a rate-limited backfill just takes
 // longer per call rather than multiplying request volume. The UI reflects
 // this correctly — status stays "backfilling" (SYNCING HISTORY) for the
-// whole await, with no extra polling/hammering from our side. The one
-// knob we do control is concurrency (BACKFILL_CONCURRENCY above): fewer
-// simultaneous in-flight requests means a smaller burst against Helius's
-// per-second limit, at the cost of a slower backfill wall-clock time.
+// whole await, with no extra polling/hammering from our side.
+//
+// As of Task 0, the primary defense against 429s isn't this retry path at
+// all — it's that every request dispatched through getConnection() (see
+// web/lib/autark.ts) now passes through the shared throttle in
+// web/lib/rpcThrottle.ts, which paces every call from every Connection in
+// this process (or browser tab) to a configured requests/sec ceiling before
+// it ever reaches the network, so Helius should rarely see enough burst to
+// 429 in the first place. BACKFILL_CONCURRENCY above still matters for
+// wall-clock time (how many getTransaction calls are "in the pipeline"
+// waiting on their throttle slot at once) but no longer does the throttling
+// itself.
 
 // ── backfill ──────────────────────────────────────────────────────────────────
 

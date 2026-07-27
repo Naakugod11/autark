@@ -38,6 +38,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# Task 4 fs-backend PFP uploads (dev only) — runtime-generated, not source.
+/public/uploads/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

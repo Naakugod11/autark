@@ -86,12 +86,12 @@ export function DemoButton() {
   const disabled = isRunning || isCooldown || isUnfunded;
 
   const label = isRunning
-    ? "RUNNING…"
+    ? "ARENA RUNNING…"
     : isCooldown
-      ? `COOLDOWN · ${status.secondsRemaining}S`
+      ? `ARENA COOLDOWN · ${status.secondsRemaining}S`
       : isUnfunded
-        ? "DEMO UNAVAILABLE"
-        : "▸ RUN DEMO";
+        ? "ARENA UNAVAILABLE"
+        : "▸ ENTER THE ARENA";
 
   return (
     <div className="flex flex-col items-end gap-1">
@@ -102,13 +102,13 @@ export function DemoButton() {
         title={
           isUnfunded
             ? status.reason
-            : "Triggers a real propose → accept → dispute → slash arc on devnet — watch it land in the live feed below"
+            : "Sends a real agent into a real propose → accept → dispute → slash arc on devnet — watch it live in the feed and on the network graph below"
         }
         className={
           "border px-2.5 py-1 text-[10px] font-semibold tracking-[0.14em] transition-colors " +
           (disabled
             ? "cursor-not-allowed border-ink-line text-ink-faint"
-            : "border-ink bg-ink text-bone hover:opacity-80")
+            : "border-bone bg-bone text-ink hover:opacity-80")
         }
       >
         {label}

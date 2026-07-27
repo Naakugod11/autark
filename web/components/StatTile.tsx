@@ -15,13 +15,13 @@ export function StatTile({
     <div
       className={
         "border px-3 py-2.5 transition-colors duration-700 " +
-        (flash ? "border-danger bg-danger-wash" : "border-ink-line bg-bone")
+        (flash ? "border-danger bg-danger-wash" : "border-ink-line bg-ink")
       }
     >
       <div
         className={
           "text-[19px] font-semibold tabular-nums " +
-          (danger ? "text-danger-ink" : accent ? "text-amber-ink" : "text-ink")
+          (danger ? "text-danger-ink" : accent ? "text-amber-ink" : "text-bone")
         }
       >
         {value}

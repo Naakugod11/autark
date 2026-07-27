@@ -3,10 +3,13 @@
 import { useEffect, useState } from "react";
 import type { FeedRow } from "@/lib/economy";
 
-// A full-screen tinted flash reads as neon/gimmicky against the light,
-// restrained system — this is the "ink-heavy inversion block" solution
-// applied at the top of the viewport instead: a hard-edged black banner
-// that slides in, impossible to miss without any glow or color wash.
+// A full-screen tinted flash reads as neon/gimmicky against the restrained
+// system — this is a hard-edged banner at the top of the viewport instead,
+// impossible to miss without a color wash over the whole page. On dark, the
+// page itself is already Ink, so the drama comes from the danger-red border
+// + glow and a solid amber "stamp" on the SLASHED label, not from an
+// ink-fill block (that trick only worked when Ink was the odd one out
+// against a light page).
 export function SlashOverlay({ row }: { row: FeedRow | null }) {
   const [visibleId, setVisibleId] = useState<string | null>(null);
   const [prevRowId, setPrevRowId] = useState<string | null>(null);
@@ -34,9 +37,11 @@ export function SlashOverlay({ row }: { row: FeedRow | null }) {
       {row && (
         <div
           key={row.id}
-          className="animate-slash-shake flex items-center gap-3 border-2 border-danger bg-ink px-5 py-2.5 shadow-[0_6px_24px_rgba(21,18,13,0.35)]"
+          className="animate-slash-shake flex items-center gap-3 border-2 border-danger bg-ink-overlay px-5 py-2.5 shadow-[0_6px_28px_rgba(229,72,77,0.4)]"
         >
-          <span className="shrink-0 text-[11px] font-bold tracking-[0.3em] text-danger">SLASHED</span>
+          <span className="shrink-0 bg-amber px-2 py-0.5 text-[11px] font-bold tracking-[0.3em] text-ink">
+            SLASHED
+          </span>
           <span className="h-3 w-px bg-bone/30" />
           <span className="text-[12px] font-semibold text-bone">{row.headline}</span>
         </div>
