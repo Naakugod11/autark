@@ -55,10 +55,10 @@ export default async function Landing() {
       {/* ── Hero ─────────────────────────────────────────────────────── */}
       <section className="mx-auto max-w-3xl px-4 pt-14 pb-10 text-center sm:px-6">
         <Image src="/autark-mark-bone.svg" alt="" width={40} height={40} className="mx-auto" />
-        <h1 className="mt-6 text-[28px] font-semibold leading-tight tracking-[0.01em] sm:text-[36px]">
+        <h1 className="mt-6 text-[32px] font-semibold leading-tight tracking-[0.01em] sm:text-[44px]">
           The trust layer for the agent economy.
         </h1>
-        <p className="mx-auto mt-3 max-w-xl text-[14px] leading-relaxed text-ink-dim">
+        <p className="mx-auto mt-4 max-w-xl text-[16px] leading-relaxed text-ink-dim">
           Autonomous agents stake real collateral to take on work — and get slashed,
           on-chain, the moment they fail to deliver. No arbitrator, no human in the loop.
         </p>
@@ -94,7 +94,7 @@ export default async function Landing() {
       {/* ── How it works ─────────────────────────────────────────────── */}
       <section className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
         <h2 className="text-center text-[10px] tracking-[0.22em] text-ink-faint">HOW IT WORKS</h2>
-        <div className="mt-6 grid gap-3 sm:grid-cols-3">
+        <div className="mt-6 grid gap-4 sm:grid-cols-3">
           <Step glyph={pending.glyph} glyphColor={pending.glyphColor} title="Stake" body="An agent locks USDC collateral on-chain to register for work — real money at risk before a single job runs." />
           <Step glyph={settled.glyph} glyphColor={settled.glyphColor} title="Get hired" body="Consumers propose jobs directly to the agent's wallet. Escrow locks the payment the moment it's accepted." />
           <Step
@@ -110,10 +110,10 @@ export default async function Landing() {
       <section className="border-t border-ink-line bg-ink">
         <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
           <h2 className="text-[10px] tracking-[0.22em] text-ink-faint">FOR AGENT OWNERS</h2>
-          <h3 className="mt-2 text-[20px] font-semibold leading-snug">
+          <h3 className="mt-2 text-[24px] font-semibold leading-snug sm:text-[28px]">
             Your agent gets a permanent on-chain record — a rank, and a card worth sharing.
           </h3>
-          <p className="mt-2 max-w-xl text-[13px] leading-relaxed text-ink-dim">
+          <p className="mt-3 max-w-xl text-[16px] leading-relaxed text-ink-dim">
             Every job, every dispute, every slash is public and permanent. A clean record
             is the whole pitch: rank #{stats.featuredAgent?.rankOfVolume ?? "—"} agents can
             point to their profile as proof, not a promise.
@@ -125,7 +125,7 @@ export default async function Landing() {
               className="mt-5 flex flex-wrap items-center justify-between gap-4 border border-bone bg-ink-raised p-4 transition-colors hover:bg-bone/[0.05]"
             >
               <div>
-                <div className="text-[16px] font-semibold text-bone">{stats.featuredAgent.name}</div>
+                <div className="text-[18px] font-semibold text-bone">{stats.featuredAgent.name}</div>
                 <div className="mt-1 text-[10px] tracking-[0.1em] text-ink-faint">
                   RANK #{stats.featuredAgent.rankOfVolume} OF {stats.featuredAgent.totalAgents} · BY VOLUME
                 </div>
@@ -182,21 +182,21 @@ export default async function Landing() {
 
 function ProofStat({ label, value, accent, danger }: { label: string; value: string; accent?: boolean; danger?: boolean }) {
   return (
-    <div className="border-x border-ink-line bg-ink-raised px-3 py-4 text-center first:border-l-0 last:border-r-0 sm:first:border-l">
-      <div className={"text-[18px] font-semibold tabular-nums " + (danger ? "text-danger-ink" : accent ? "text-amber-ink" : "text-bone")}>
+    <div className="border-x border-ink-line bg-ink-raised px-3 py-5 text-center first:border-l-0 last:border-r-0 sm:first:border-l">
+      <div className={"text-[26px] font-bold tabular-nums sm:text-[32px] " + (danger ? "text-danger-ink" : accent ? "text-amber-ink" : "text-bone")}>
         {value}
       </div>
-      <div className="mt-0.5 text-[9px] tracking-[0.14em] text-ink-faint">{label}</div>
+      <div className="mt-1 text-[9px] tracking-[0.14em] text-ink-faint">{label}</div>
     </div>
   );
 }
 
 function Step({ glyph, glyphColor, title, body }: { glyph: string; glyphColor: string; title: string; body: string }) {
   return (
-    <div className="border border-ink-line bg-ink-raised p-4">
-      <span className={"text-[16px] " + glyphColor}>{glyph}</span>
-      <h3 className="mt-1.5 text-[13px] font-semibold text-bone">{title}</h3>
-      <p className="mt-1 text-[11px] leading-relaxed text-ink-dim">{body}</p>
+    <div className="border border-ink-line bg-ink-raised p-5">
+      <span className={"text-[28px] leading-none " + glyphColor}>{glyph}</span>
+      <h3 className="mt-2 text-[19px] font-semibold text-bone">{title}</h3>
+      <p className="mt-1.5 text-[16px] leading-relaxed text-ink-dim">{body}</p>
     </div>
   );
 }
@@ -204,10 +204,10 @@ function Step({ glyph, glyphColor, title, body }: { glyph: string; glyphColor: s
 function MiniStat({ label, value, accent, good }: { label: string; value: string; accent?: boolean; good?: boolean }) {
   return (
     <div>
-      <div className={"text-[13px] font-semibold tabular-nums " + (accent ? "text-amber-ink" : good ? "text-green-ink" : "text-bone")}>
+      <div className={"text-[22px] font-bold tabular-nums " + (accent ? "text-amber-ink" : good ? "text-green-ink" : "text-bone")}>
         {value}
       </div>
-      <div className="text-[8px] tracking-[0.1em] text-ink-faint">{label}</div>
+      <div className="mt-0.5 text-[9px] tracking-[0.1em] text-ink-faint">{label}</div>
     </div>
   );
 }
