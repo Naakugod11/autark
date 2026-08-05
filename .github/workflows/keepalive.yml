@@ -1,0 +1,61 @@
+# .github/workflows/keepalive.yml — keeps the Vercel deploy warm and the
+# landing page's "LAST EVENT" from going stale, on a schedule.
+#
+# Two independent jobs, one mechanism (a scheduled curl):
+#   warm      — pings /api/warm every ~7 min. unstable_cache is per-instance
+#               and traffic is low, so without this nearly every real visitor
+#               hits a cold lambda (~30s). This keeps a lambda warm and its
+#               cache fresh instead.
+#   demo-arc  — triggers the existing RUN DEMO route every 6h so real on-chain
+#               activity keeps landing, and "LAST EVENT Xd ago" never happens.
+#               A failed run (e.g. a drained demo wallet) fails this job
+#               visibly — treat a red demo-arc job as an early warning, not
+#               just a missed pitch.
+#
+# Gotchas:
+#   - GitHub disables scheduled workflows automatically after 60 days with no
+#     repo activity (any push/commit resets the clock) — re-enable manually
+#     under Actions if this job goes quiet.
+#   - Scheduled crons are not guaranteed to fire exactly on time; GitHub can
+#     delay them under load. Don't treat a few minutes of drift as a problem.
+#   - Each demo-arc run spends real devnet fees + USDC across 2 jobs (a
+#     settle arc and a slash arc) — at this cadence (4 runs/day) that's ~8
+#     jobs/day of fees+USDC draining the demo provider/consumer wallets. Keep
+#     them topped up with scripts/faucet.ts or the arc will start failing
+#     with "unfunded".
+
+name: Keepalive
+
+on:
+  schedule:
+    - cron: "*/7 * * * *"
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+jobs:
+  warm:
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '*/7 * * * *'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /api/warm
+        run: |
+          curl -fsS --retry 3 --retry-delay 5 \
+            -H "x-warm-key: ${{ secrets.WARM_CRON_SECRET }}" \
+            "${{ secrets.SITE_URL }}/api/warm"
+        env:
+          SITE_URL: ${{ secrets.SITE_URL }}
+          WARM_CRON_SECRET: ${{ secrets.WARM_CRON_SECRET }}
+
+  demo-arc:
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 */6 * * *'
+    runs-on: ubuntu-latest
+    steps:
+      # Public, unauthenticated POST — same contract the "RUN DEMO" button on
+      # the landing page uses (web/app/api/demo/route.ts). No body/params. A
+      # non-idle demo state (cooldown/running) or a thrown error both surface
+      # as a non-2xx response, which -f turns into a red job.
+      - name: Trigger demo arc
+        run: |
+          curl -fsS -X POST "${{ secrets.SITE_URL }}/api/demo"
+        env:
+          SITE_URL: ${{ secrets.SITE_URL }}
