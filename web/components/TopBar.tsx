@@ -15,7 +15,7 @@ const NAV = [
 export function TopBar({ status }: { status: ConnStatus }) {
   const pathname = usePathname();
   return (
-    <header className="flex items-center justify-between border-b border-ink-line bg-ink px-4 py-3 sm:px-6">
+    <header className="flex flex-wrap items-center justify-between gap-y-2 border-b border-ink-line bg-ink px-4 py-3 sm:px-6">
       <div className="flex items-center gap-4">
         <Link href="/" className="flex items-center gap-3">
           <Image src="/autark-mark-bone.svg" alt="" width={26} height={26} priority />

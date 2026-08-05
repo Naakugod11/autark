@@ -4,8 +4,18 @@ import { useEconomyContext } from "@/components/EconomyProvider";
 import { TopBar } from "@/components/TopBar";
 import { NetworkGraph } from "@/components/NetworkGraph";
 import { ConnectionError } from "@/components/ConnectionError";
+import type { GraphEdge } from "@/lib/graph";
+import type { FeedRow } from "@/lib/economy";
 
-export function NetworkView() {
+export function NetworkView({
+  baseEdges,
+  baseRows,
+  baseMaxTs,
+}: {
+  baseEdges: GraphEdge[];
+  baseRows: FeedRow[];
+  baseMaxTs: number;
+}) {
   const { status, error } = useEconomyContext();
 
   return (
@@ -15,7 +25,7 @@ export function NetworkView() {
         <ConnectionError message={error} />
       ) : (
         <main className="flex flex-1 flex-col gap-2 p-2 xl:min-h-0">
-          <NetworkGraph />
+          <NetworkGraph baseEdges={baseEdges} baseRows={baseRows} baseMaxTs={baseMaxTs} />
         </main>
       )}
     </div>

@@ -1,34 +1,48 @@
 /**
  * web/app/api/demo/route.ts — "RUN DEMO" button backend.
  *
- * Drives the REAL propose → accept → deliver → dispute → slash arc on devnet
- * using a fixed, server-held provider+consumer keypair pair (never sent to
- * the browser — see scripts/setup-demo-agent.ts and .env.example). The
- * dashboard itself never signs anything; visitors just watch the existing
- * live event subscription render each transaction as it lands, exactly like
- * any organic on-chain activity.
+ * v2 (Task 5): drives TWO real jobs back-to-back on devnet, using the same
+ * fixed, server-held provider+consumer keypair pair (never sent to the
+ * browser — see scripts/setup-demo-agent.ts and .env.example):
+ *
+ *   Job A — propose → accept → deliver → (wait out the challenge window,
+ *   undisputed) → claimSettlement. A real settlement: provider gets paid,
+ *   scoreVolume goes up, 24H VOLUME on the landing strip moves.
+ *
+ *   Job B — propose → accept → deliver → dispute → (wait out the defense
+ *   window, undefended) → resolveChallenge. The original slash arc: the
+ *   provider loses its stake, TOTAL SLASHED moves.
+ *
+ * v1 only ever ran the slash arc, so a visitor watching the demo saw
+ * punishment with no payoff and 24H VOLUME never moved. Running settle
+ * first means a watching visitor sees settle-green land, then — moments
+ * later — slash-red, inside one button press. The dashboard itself never
+ * signs anything; visitors just watch the existing live event subscription
+ * render each transaction as it lands, exactly like any organic on-chain
+ * activity.
  *
  * This is a Node.js route (not Edge) — it needs Buffer/fs (the IDL's JSON
  * import) and real signing, none of which run on the edge runtime.
  *
- * Compressed vs. scripts/demo.ts: that script runs TWO full acts (an honest
- * agent earning reputation, then a flaky one getting slashed) through a
+ * Compressed vs. scripts/demo.ts: that script runs its two acts through a
  * polling AutarkAgent runtime, generating fresh keypairs every run — built
- * for an on-stage narrated demo, not a 60s serverless budget. This route
- * only runs the slash arc (the point of the button), issues each
- * instruction directly via web/lib/demoArc.ts instead of the AutarkAgent
- * polling abstraction (we hold both keypairs, so there's nothing to poll
- * for), and reuses one fixed identity pair forever instead of registering a
- * fresh agent per click.
+ * for an on-stage narrated demo, not a serverless time budget. This route
+ * issues each instruction directly via web/lib/demoArc.ts instead of the
+ * AutarkAgent polling abstraction (we hold both keypairs, so there's
+ * nothing to poll for), and reuses one fixed identity pair forever instead
+ * of registering a fresh agent per click.
  *
  * Lock + cooldown are read from on-chain state, not a database: the demo
  * provider's own `openJobs` counter is the "already running" lock (shared
  * and correct across every serverless instance/region — no separate store
- * needed), and `lastSlashSlot` converted to wall-clock time is the cooldown
- * clock. This does mean a near-simultaneous double-press has a small
- * TOCTOU race (both requests could read "idle" before either's proposeJob
- * lands) — acceptable for a low-traffic demo button: the loser just fails
- * its acceptJob against locked stake and surfaces a clear error, it doesn't
+ * needed; both jobs run strictly sequentially within one request, so
+ * `openJobs` returns to 0 after job A settles before job B's acceptJob ever
+ * increments it again), and `lastSlashSlot` converted to wall-clock time is
+ * the cooldown clock (only job B ever sets it — job A never slashes). This
+ * does mean a near-simultaneous double-press has a small TOCTOU race (both
+ * requests could read "idle" before either's proposeJob lands) —
+ * acceptable for a low-traffic demo button: the loser just fails its
+ * acceptJob against locked stake and surfaces a clear error, it doesn't
  * corrupt anything.
  */
 
@@ -43,6 +57,7 @@ import {
   proposeJob,
   acceptJob,
   releaseEscrow,
+  claimSettlement,
   challengeSettlement,
   resolveChallenge,
 } from "@/lib/demoArc";
@@ -58,11 +73,19 @@ export const dynamic = "force-dynamic";
 const DEFAULT_TEST_MINT = "22Hs7sbpW72QhdWzgNajukC4QS1iAJE951ecjoz36FoF";
 
 const JOB_AMOUNT_USDC = 1; // small — the provider's stake drains a little on every real slash
-const CHALLENGE_WINDOW_SECONDS = 20;
+// Job A (settle) needs no real dispute window — nobody's going to challenge
+// it — just enough that claimSettlement's on-chain check (now >=
+// settle_eligible_at) has unambiguously passed by the time we crank it.
+// Kept short so the two-job arc still fits the soft deadline below.
+const SETTLE_CHALLENGE_WINDOW_SECONDS = 6;
+const CHALLENGE_WINDOW_SECONDS = 20; // job B's window — long enough that the immediate challengeSettlement below is always safely inside it
 const DEFENSE_WINDOW_SECONDS = 12;
 const COOLDOWN_SECONDS = 150;
 const APPROX_SLOT_SECONDS = 0.45;
-const SOFT_DEADLINE_MS = 48_000; // abort with a clear message before Vercel kills the function at maxDuration
+// Abort with a clear message before Vercel kills the function at
+// maxDuration — raised from v1's 48s to cover job A's extra propose/
+// accept/release/claim round trip plus its own short wait.
+const SOFT_DEADLINE_MS = 50_000;
 
 type DemoStatus =
   | { state: "idle" }
@@ -194,53 +217,101 @@ export async function POST() {
     const providerProgram = signingProgram(providerKp, rpcUrl);
     const consumerProgram = signingProgram(consumerKp, rpcUrl);
 
-    const jobId = Array.from(crypto.randomBytes(32));
-    const now = Math.floor(Date.now() / 1000);
     const signatures: Record<string, string> = {};
 
-    if (timeLeft() < 20_000) throw new Error("RPC too slow right now — aborting before the propose step");
-    signatures.proposeJob = await withRetry(() =>
+    // ── Job A — deliver honestly, settle (real volume) ────────────────────
+    const jobIdA = Array.from(crypto.randomBytes(32));
+    const nowA = Math.floor(Date.now() / 1000);
+
+    if (timeLeft() < 44_000) throw new Error("RPC too slow right now — aborting before job A (the settle arc) even begins");
+    signatures.proposeJobA = await withRetry(() =>
       proposeJob(consumerProgram, consumerKp, {
-        jobId,
+        jobId: jobIdA,
         provider: providerKp.publicKey,
         amountUsdc: JOB_AMOUNT_USDC,
-        acceptanceDeadline: now + 3600,
-        deliveryDeadline: now + 7200,
+        acceptanceDeadline: nowA + 3600,
+        deliveryDeadline: nowA + 7200,
+        challengeWindowSeconds: SETTLE_CHALLENGE_WINDOW_SECONDS,
+        defenseWindowSeconds: DEFENSE_WINDOW_SECONDS,
+        mint,
+      })
+    );
+
+    if (timeLeft() < 40_000) throw new Error("RPC too slow right now — job A was proposed but the arc aborted before it could be accepted; it will sit unaccepted until it expires");
+    signatures.acceptJobA = await withRetry(() =>
+      acceptJob(providerProgram, providerKp, { consumer: consumerKp.publicKey, jobId: jobIdA })
+    );
+
+    if (timeLeft() < 36_000) throw new Error("RPC too slow right now — job A was accepted but not delivered; it will expire on its own");
+    signatures.releaseEscrowA = await withRetry(() =>
+      releaseEscrow(providerProgram, providerKp, { consumer: consumerKp.publicKey, jobId: jobIdA })
+    );
+
+    // Job A's challenge window must actually elapse on-chain before
+    // claimSettlement's check (now >= settle_eligible_at) passes — real
+    // wall-clock time, not something retry/backoff can shortcut. +3s buffer
+    // against clock skew, matching scripts/demo.ts's own pattern.
+    const waitAMs = SETTLE_CHALLENGE_WINDOW_SECONDS * 1000 + 3_000;
+    if (timeLeft() < waitAMs + 8_000) {
+      throw new Error("RPC too slow right now — job A was delivered but the arc aborted before it could be claimed; it will sit claimable once its challenge window passes");
+    }
+    await new Promise((r) => setTimeout(r, waitAMs));
+
+    signatures.claimSettlement = await withRetry(() =>
+      claimSettlement(providerProgram, providerKp, {
+        consumer: consumerKp.publicKey,
+        jobId: jobIdA,
+        providerWallet: providerKp.publicKey,
+        mint,
+      })
+    );
+
+    // ── Job B — deliver, get disputed, undefended -> slash ─────────────────
+    const jobIdB = Array.from(crypto.randomBytes(32));
+    const nowB = Math.floor(Date.now() / 1000);
+
+    if (timeLeft() < 30_000) throw new Error("RPC too slow right now — job A settled but the arc aborted before job B (the slash arc) could begin");
+    signatures.proposeJobB = await withRetry(() =>
+      proposeJob(consumerProgram, consumerKp, {
+        jobId: jobIdB,
+        provider: providerKp.publicKey,
+        amountUsdc: JOB_AMOUNT_USDC,
+        acceptanceDeadline: nowB + 3600,
+        deliveryDeadline: nowB + 7200,
         challengeWindowSeconds: CHALLENGE_WINDOW_SECONDS,
         defenseWindowSeconds: DEFENSE_WINDOW_SECONDS,
         mint,
       })
     );
 
-    if (timeLeft() < 16_000) throw new Error("RPC too slow right now — job was proposed but the arc aborted before it could resolve; it will sit unaccepted until it expires");
-    signatures.acceptJob = await withRetry(() =>
-      acceptJob(providerProgram, providerKp, { consumer: consumerKp.publicKey, jobId })
+    if (timeLeft() < 26_000) throw new Error("RPC too slow right now — job B was proposed but the arc aborted before it could be accepted; it will sit unaccepted until it expires");
+    signatures.acceptJobB = await withRetry(() =>
+      acceptJob(providerProgram, providerKp, { consumer: consumerKp.publicKey, jobId: jobIdB })
     );
 
-    if (timeLeft() < 14_000) throw new Error("RPC too slow right now — job was accepted but not delivered; it will expire on its own");
-    signatures.releaseEscrow = await withRetry(() =>
-      releaseEscrow(providerProgram, providerKp, { consumer: consumerKp.publicKey, jobId })
+    if (timeLeft() < 22_000) throw new Error("RPC too slow right now — job B was accepted but not delivered; it will expire on its own");
+    signatures.releaseEscrowB = await withRetry(() =>
+      releaseEscrow(providerProgram, providerKp, { consumer: consumerKp.publicKey, jobId: jobIdB })
     );
 
-    if (timeLeft() < 10_000) throw new Error("RPC too slow right now — delivered but not disputed; the flaky agent will self-claim as if it got away with it");
+    if (timeLeft() < 18_000) throw new Error("RPC too slow right now — job B was delivered but not disputed; the flaky agent will self-claim as if it got away with it");
     signatures.challengeSettlement = await withRetry(() =>
-      challengeSettlement(consumerProgram, consumerKp, { jobId, mint })
+      challengeSettlement(consumerProgram, consumerKp, { jobId: jobIdB, mint })
     );
 
-    // The defense window must actually elapse on-chain before resolveChallenge's
-    // undefended branch is valid — this is real wall-clock time, not something
-    // any retry/backoff can shortcut. +3s buffer against clock skew, matching
-    // scripts/demo.ts's own pattern.
-    const waitMs = DEFENSE_WINDOW_SECONDS * 1000 + 3_000;
-    if (timeLeft() < waitMs + 8_000) {
-      throw new Error("RPC too slow right now — the dispute is open on-chain and will resolve once the defense window passes, but not within this request");
+    // Job B's defense window must actually elapse on-chain before
+    // resolveChallenge's undefended branch is valid — same real-wall-clock
+    // constraint as job A's wait above.
+    const waitBMs = DEFENSE_WINDOW_SECONDS * 1000 + 3_000;
+    if (timeLeft() < waitBMs + 8_000) {
+      throw new Error("RPC too slow right now — job B's dispute is open on-chain and will resolve once the defense window passes, but not within this request");
     }
-    await new Promise((r) => setTimeout(r, waitMs));
+    await new Promise((r) => setTimeout(r, waitBMs));
 
     signatures.resolveChallenge = await withRetry(() =>
       resolveChallenge(consumerProgram, consumerKp, {
         consumer: consumerKp.publicKey,
-        jobId,
+        jobId: jobIdB,
         provider: providerKp.publicKey,
         challenger: consumerKp.publicKey,
         mint,

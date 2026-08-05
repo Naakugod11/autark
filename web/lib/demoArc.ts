@@ -146,6 +146,36 @@ export async function releaseEscrow(
     .rpc();
 }
 
+// Task 5 (demo arc v2): the settle-side counterpart to challengeSettlement —
+// once the challenge window has elapsed with no dispute opened, anyone can
+// crank this to pay the provider and emit JobSettled (real settled volume,
+// not just a slash). Account shapes ported 1:1 from
+// sdk/src/instructions/job.ts's buildClaimSettlement.
+export async function claimSettlement(
+  program: Program<Autark>,
+  cranker: Keypair,
+  opts: { consumer: PublicKey; jobId: number[]; providerWallet: PublicKey; mint: PublicKey }
+): Promise<string> {
+  const job = jobOfferPda(opts.consumer, Uint8Array.from(opts.jobId));
+  const providerAgent = agentPda(opts.providerWallet);
+  const providerAta = getAssociatedTokenAddressSync(opts.mint, opts.providerWallet, false);
+  return program.methods
+    .claimSettlement(opts.jobId)
+    .accounts(
+      accs({
+        jobOffer: job,
+        providerAgent,
+        escrowVault: escrowVault(job, opts.mint),
+        providerTokenAccount: providerAta,
+        providerWallet: opts.providerWallet,
+        mint: opts.mint,
+        cranker: cranker.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+    )
+    .rpc();
+}
+
 export async function challengeSettlement(
   program: Program<Autark>,
   consumer: Keypair,

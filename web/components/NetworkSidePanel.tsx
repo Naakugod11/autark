@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { AgentAvatar } from "./AgentAvatar";
+import { FeedRowItem } from "./FeedRowItem";
 import type { GraphNode, GraphEdge } from "@/lib/graph";
+import type { FeedRow, FleetAgent } from "@/lib/economy";
 
 function fmt(micro: number): string {
   return (micro / 1e6).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -28,17 +30,22 @@ export function NetworkSidePanel({
   node,
   edges,
   allNodes,
+  rows,
   onClose,
 }: {
   node: GraphNode;
   edges: GraphEdge[];
   allNodes: GraphNode[];
+  // Full merged history (server snapshot + live) involving THIS agent,
+  // newest-first — Task 3's "same log appears filtered on the node panel".
+  rows: FeedRow[];
   onClose: () => void;
 }) {
   const { agent } = node;
   const total = agent.scoreCompleted + agent.scoreFailed;
   const clean = total === 0 ? 100 : Math.round((agent.scoreCompleted / total) * 100);
   const byOwner = new Map(allNodes.map((n) => [n.owner, n]));
+  const agentsByOwner = new Map(allNodes.map((n) => [n.owner, n.agent]));
 
   const sortedEdges = [...edges].sort((a, b) => b.totalVolume - a.totalVolume);
 
@@ -126,6 +133,20 @@ export function NetworkSidePanel({
                 </Link>
               );
             })}
+          </div>
+        </div>
+
+        <div className="mt-4 border-t border-ink-line pt-3">
+          <h4 className="text-[9px] tracking-[0.18em] text-ink-faint">
+            ACTIVITY LOG · {rows.length}
+          </h4>
+          <div className="mt-2 -mx-3 flex flex-col">
+            {rows.length === 0 && (
+              <p className="px-3 text-[10px] text-ink-faint">no recorded activity yet</p>
+            )}
+            {rows.map((row) => (
+              <FeedRowItem key={row.id} row={row} agents={agentsByOwner} />
+            ))}
           </div>
         </div>
       </div>

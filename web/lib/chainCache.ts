@@ -36,6 +36,7 @@ import { getProgram, fetchAgents, fetchSlashingPool, type AgentData } from "./au
 import { backfill, type AutarkEvent } from "./events";
 import { identityFor } from "./identity";
 import type { FeedRow } from "./economy";
+import { buildGraphEdges, type GraphEdge } from "./graph";
 
 // Single shared TTL for every server-rendered consumer. Devnet reads don't
 // need to be fresher than this — the live terminal (websocket, browser-side)
@@ -317,3 +318,51 @@ async function loadEventRows(): Promise<EventRowsSnapshot> {
 export const getEventRows = cache(
   singleFlight(unstable_cache(loadEventRows, ["chain-event-rows"], { revalidate: SNAPSHOT_REVALIDATE_SECONDS }))
 );
+
+export type RelationshipsSnapshot = {
+  edges: GraphEdge[];
+  // Full cached history (oldest → newest, same order as getEventRows), free
+  // to include since it's already sitting in memory from the getEventRows()
+  // call below — powers the network graph's per-node/per-edge activity logs
+  // (Task 3) so they show real history, not just whatever's left in the
+  // client's own ~120-event live-feed window.
+  rows: FeedRow[];
+  // The newest row's ts seen in this snapshot's event-row source — the
+  // network graph's client-side merges (web/lib/graph.ts's mergeGraphEdges
+  // and mergeFeedRows) use this as the cutoff so a live event already
+  // reflected here never gets double-counted just because the browser's own
+  // subscription also observes it.
+  maxTs: number;
+};
+
+// Derives the /network base graph from the SAME cached event-row snapshot
+// getEventRows() already warms for the landing page and profile history —
+// no separate RPC read, no separate throttle budget, just a different pure
+// projection of rows that are already sitting in the cache. This is what
+// fixes Task 1's "older relationships render as disconnected dots" bug: the
+// client's own live feed only ever holds ~120 events (events.ts's
+// STREAM_BACKFILL_LIMIT), but this aggregates from getEventRows's full
+// 150-event cached history instead, so a relationship whose only activity
+// has aged out of the client's own backfill window still renders as a
+// connected edge.
+async function loadRelationships(): Promise<RelationshipsSnapshot> {
+  const { rows } = await getEventRows();
+  // buildGraphEdges expects NEWEST-first input (economy.ts's live `feed`
+  // convention — it walks backwards to accumulate oldest->newest) but
+  // getEventRows().rows is oldest-first (backfill()'s own chronological
+  // order, preserved as-is for the `rows` field above). Feeding it
+  // unreversed silently inverts the walk: dominantFamily/lastEventTs/
+  // hasOpenJob would end up reflecting each pair's OLDEST event instead of
+  // its newest.
+  return {
+    edges: buildGraphEdges([...rows].reverse()),
+    rows,
+    maxTs: rows.length ? rows[rows.length - 1].ts : 0,
+  };
+}
+
+// Cheap on top of an already-cached getEventRows(): React's cache() dedupes
+// repeat calls within one request, and the underlying rows are already
+// unstable_cache-wrapped — this is just an in-memory re-aggregation, no new
+// chain read, no new singleFlight/throttle concern.
+export const getRelationships = cache(loadRelationships);

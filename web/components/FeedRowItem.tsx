@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AgentAvatar } from "./AgentAvatar";
+import { TxLink } from "./TxLink";
 import { identityFor, type AgentIdentity } from "@/lib/identity";
 import { familyStyleOf } from "@/lib/feedStyle";
 import type { FeedRow, FleetAgent } from "@/lib/economy";
@@ -87,6 +88,8 @@ export function FeedRowItem({ row, agents }: { row: FeedRow; agents: Map<string,
       >
         {row.badge}
       </span>
+
+      <TxLink signature={row.signature} iconOnly className="w-3 shrink-0 text-center text-[10px] leading-none text-ink-faint hover:text-bone" />
     </div>
   );
 }
