@@ -18,7 +18,12 @@ export function StatusPill({ status }: { status: ConnStatus }) {
           (isError ? "bg-danger" : isLive ? "bg-green-ink animate-pulse-dot" : "bg-ink-faint")
         }
       />
-      <span className={isError ? "text-danger-ink" : isLive ? "text-green-ink" : "text-ink-dim"}>
+      {/* Label text hides below sm — matches TopBar's own "AGENT ECONOMY
+          TERMINAL" subtitle breakpoint. The widest label ("SYNCING HISTORY")
+          combined with DemoButton's "ENTER THE ARENA" otherwise overflows a
+          390px header; the dot alone still carries the live/connecting/error
+          state at a glance. */}
+      <span className={"hidden sm:inline " + (isError ? "text-danger-ink" : isLive ? "text-green-ink" : "text-ink-dim")}>
         {LABEL[status]}
       </span>
     </div>
